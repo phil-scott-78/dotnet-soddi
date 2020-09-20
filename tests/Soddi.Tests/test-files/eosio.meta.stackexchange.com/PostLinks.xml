@@ -1,0 +1,9 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<postlinks>
+  <row Id="11" CreationDate="2018-05-18T09:48:35.737" PostId="16" RelatedPostId="1" LinkTypeId="1" />
+  <row Id="19" CreationDate="2018-06-06T16:21:56.080" PostId="5" RelatedPostId="18" LinkTypeId="1" />
+  <row Id="25" CreationDate="2018-07-03T17:48:58.973" PostId="15" RelatedPostId="27" LinkTypeId="3" />
+  <row Id="62" CreationDate="2018-08-03T10:10:23.997" PostId="31" RelatedPostId="28" LinkTypeId="1" />
+  <row Id="104" CreationDate="2018-10-21T14:38:05.803" PostId="38" RelatedPostId="1" LinkTypeId="1" />
+  <row Id="122" CreationDate="2018-11-04T19:57:34.503" PostId="40" RelatedPostId="36" LinkTypeId="1" />
+</postlinks>

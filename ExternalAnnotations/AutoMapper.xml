@@ -1,0 +1,7 @@
+<assembly name="AutoMapper">
+    <member name="T:AutoMapper.Profile">
+        <attribute ctor="M:JetBrains.Annotations.UsedImplicitlyAttribute.#ctor(JetBrains.Annotations.ImplicitUseTargetFlags)" >
+            <argument>5</argument>
+        </attribute>
+    </member>
+</assembly>

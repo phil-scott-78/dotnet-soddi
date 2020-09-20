@@ -1,0 +1,7 @@
+<assembly name="MediatR">
+    <member name="T:MediatR.IRequestHandler`2">
+        <attribute ctor="M:JetBrains.Annotations.UsedImplicitlyAttribute.#ctor(JetBrains.Annotations.ImplicitUseTargetFlags)" >
+            <argument>5</argument>
+        </attribute>
+    </member>
+</assembly>
