@@ -4,7 +4,7 @@ using System.IO;
 using System.Linq;
 using SharpCompress.Archives.SevenZip;
 
-namespace Soddi.Pipelines
+namespace Soddi.Services
 {
     public class ArchiveProcessor : IArchivedDataProcessor
     {

@@ -7,7 +7,7 @@ using System.Xml;
 using LamarCodeGeneration.Util;
 using Soddi.TableTypes;
 
-namespace Soddi.Pipelines
+namespace Soddi.Services
 {
     public static class StreamToDataReaderExtensions
     {

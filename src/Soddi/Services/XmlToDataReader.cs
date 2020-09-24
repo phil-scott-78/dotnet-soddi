@@ -5,7 +5,7 @@ using System.Reflection;
 using System.Xml;
 using System.Xml.Linq;
 
-namespace Soddi.Pipelines
+namespace Soddi.Services
 {
     public class XmlToDataReader<TClass> : IDataReader
     {

@@ -3,7 +3,7 @@ using System.Data;
 using System.Data.SqlClient;
 using System.IO;
 
-namespace Soddi.Pipelines
+namespace Soddi.Services
 {
     public class SqlServerBulkInserter
     {

@@ -8,7 +8,7 @@ using System.Threading.Tasks;
 using CommandLine;
 using MediatR;
 using ShellProgressBar;
-using Soddi.Pipelines;
+using Soddi.Services;
 using Soddi.Tasks;
 using Soddi.Tasks.SqlServer;
 

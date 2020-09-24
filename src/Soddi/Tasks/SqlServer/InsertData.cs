@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Soddi.Pipelines;
+using Soddi.Services;
 
 namespace Soddi.Tasks.SqlServer
 {
