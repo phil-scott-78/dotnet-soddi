@@ -361,3 +361,7 @@ FodyWeavers.xsd
 
 # Idea
 .idea/
+
+# Torrent files for testing
+.____padding_file/
+torrents/

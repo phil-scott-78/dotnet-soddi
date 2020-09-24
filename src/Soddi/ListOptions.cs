@@ -12,7 +12,7 @@ namespace Soddi
     [Verb("list", HelpText = "List available database archives.")]
     public class ListOptions : IRequest<int>
     {
-        [Option('p', "pattern", HelpText = "Pattern to include")]
+        [Value(0, MetaName = "Pattern", HelpText = "Pattern to include (e.g. \"av\" includes all archives containing \"av\")")]
         public string Pattern { get; set; } = string.Empty;
     }
 

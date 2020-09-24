@@ -10,6 +10,7 @@
     <PackageReference Include="CommandLineParser" Version="2.8.0" />
     <PackageReference Include="Lamar" Version="4.3.1" />
     <PackageReference Include="MediatR" Version="8.1.0" />
+    <PackageReference Include="MonoTorrent" Version="1.0.24" />
     <PackageReference Include="SharpCompress" Version="0.26.0" />
     <PackageReference Include="ShellProgressBar" Version="5.0.0" />
     <PackageReference Include="Spectre.Console" Version="0.21.1" />

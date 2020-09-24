@@ -17,7 +17,8 @@ namespace Soddi
 #if DEBUG
             // args = new[] {"create", @"C:\Users\phils\Downloads\aviation.stackexchange.com\", "--dropAndCreate"};
             // args = new[] {"list", "-p", "stack"};
-            args = new[] {"download", "space"};
+            // args = new[] {"download", "space"};
+            args = new[] {"torrent", "math"};
 #endif
 
             var commands = Assembly
