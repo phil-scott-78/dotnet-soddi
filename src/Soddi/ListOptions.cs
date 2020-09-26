@@ -4,16 +4,22 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandLine;
+using JetBrains.Annotations;
 using MediatR;
 using Spectre.Console;
 
 namespace Soddi
 {
-    [Verb("list", HelpText = "List available database archives.")]
+    [Verb("list", HelpText = "List available database archives."), UsedImplicitly]
     public class ListOptions : IRequest<int>
     {
+        public ListOptions(string pattern)
+        {
+            Pattern = pattern;
+        }
+
         [Value(0, MetaName = "Pattern", HelpText = "Pattern to include (e.g. \"av\" includes all archives containing \"av\")")]
-        public string Pattern { get; set; } = string.Empty;
+        public string Pattern { get; }
     }
 
     public class ListHandler : IRequestHandler<ListOptions, int>

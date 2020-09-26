@@ -1,15 +1,17 @@
 ﻿using System;
+using System.IO.Abstractions;
 using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using CommandLine;
-using CommandLine.Text;
+using JetBrains.Annotations;
 using Lamar;
 using MediatR;
 using MediatR.Pipeline;
 
 namespace Soddi
 {
+    [UsedImplicitly]
     public class Program
     {
         public static async Task<int> Main(string[] args)
@@ -18,32 +20,37 @@ namespace Soddi
             // args = new[] {"create", @"C:\Users\phils\Downloads\aviation.stackexchange.com\", "--dropAndCreate"};
             // args = new[] {"list", "-p", "stack"};
             // args = new[] {"download", "space"};
-            args = new[] {"torrent", "math"};
+            // args = new[] {"torrent", "math"};
+            args = new[] {"create", @"e:\torrent-data\aviation.stackexchange.com.7z"};
 #endif
 
+            // find all classes that implement IRequest<int>. They are the verbs
+            // that the application supports
             var commands = Assembly
                 .GetExecutingAssembly()
                 .GetTypes()
                 .Where(t => t.GetInterfaces().Contains(typeof(IRequest<int>)))
                 .ToArray();
 
+            // parse the command lines and cast the parsed command line argument
+            // back into IRequest<int>.
             var parserResult = Parser.Default.ParseArguments(args, commands);
-            if (parserResult is Parsed<object> parser && parser.Value is IRequest<int> request)
-            {
-                var mediator = BuildContainer().GetInstance<IMediator>();
-                try
-                {
-                    return await mediator.Send(request);
-                }
-                catch (SoddiException e)
-                {
-                    Console.WriteLine(e.Message);
-                    return 1;
-                }
-            }
+            if (!(parserResult is Parsed<object> parser)) return 1;
+            if (!(parser.Value is IRequest<int> request)) return 1;
 
-            Console.WriteLine(HelpText.AutoBuild(parserResult));
-            return 1;
+            using var container = BuildContainer();
+            var mediator = container.GetInstance<IMediator>();
+
+            try
+            {
+                // send the request to the appropriate handler
+                return await mediator.Send(request);
+            }
+            catch (SoddiException e)
+            {
+                Console.WriteLine(e.Message);
+                return 1;
+            }
         }
 
         private static Container BuildContainer()
@@ -54,17 +61,10 @@ namespace Soddi
                 {
                     scanner.AssemblyContainingType<Program>();
                     scanner.ConnectImplementationsToTypesClosing(typeof(IRequestHandler<,>));
-                    scanner.ConnectImplementationsToTypesClosing(typeof(INotificationHandler<>));
                 });
 
-                //Pipeline
-                cfg.For(typeof(IPipelineBehavior<,>))
-                    .Add(typeof(RequestPreProcessorBehavior<,>));
-                cfg.For(typeof(IPipelineBehavior<,>))
-                    .Add(typeof(RequestPostProcessorBehavior<,>));
-
+                cfg.For<IFileSystem>().Use<FileSystem>();
                 cfg.For<IMediator>().Use<Mediator>().Transient();
-
                 cfg.For<ServiceFactory>().Use(ctx => ctx.GetInstance);
             });
         }
@@ -73,10 +73,6 @@ namespace Soddi
     public class SoddiException : Exception
     {
         public SoddiException(string? message) : base(message)
-        {
-        }
-
-        public SoddiException(string? message, Exception? innerException) : base(message, innerException)
         {
         }
     }

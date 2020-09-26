@@ -1,5 +1,6 @@
 ﻿using System;
 using System.IO;
+using System.IO.Abstractions;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
@@ -8,18 +9,21 @@ namespace Soddi.Services
 {
     public class ArchiveDownloader
     {
+        private readonly IFileSystem _fileSystem;
         private readonly string _outputPath;
         private readonly IProgress<(int downloadedInKb, int totalSizeInKb)> _progress;
 
-        public ArchiveDownloader(string outputPath, IProgress<(int downloadedInKb, int totalSizeInKb)> progress)
+        public ArchiveDownloader(string outputPath, IProgress<(int downloadedInKb, int totalSizeInKb)> progress,
+            IFileSystem? fileSystem = null)
         {
             _outputPath = outputPath;
             _progress = progress;
+            _fileSystem = fileSystem ?? new FileSystem();
         }
 
         public async Task Go(Uri uri, CancellationToken cancellationToken)
         {
-            string filename = Path.Combine(_outputPath, Path.GetFileName(uri.LocalPath));
+            string filename = _fileSystem.Path.Combine(_outputPath, _fileSystem.Path.GetFileName(uri.LocalPath));
 
             var client = new HttpClient();
             using var response =
@@ -35,13 +39,8 @@ namespace Soddi.Services
             var buffer = new byte[bufferSize];
             var isMoreToRead = true;
 
-            await using var fileStream = new FileStream(
-                filename,
-                FileMode.Create,
-                FileAccess.Write,
-                FileShare.None,
-                bufferSize,
-                true);
+            await using var fileStream = _fileSystem.FileStream.Create(filename, FileMode.Create, FileAccess.Write,
+                FileShare.None, bufferSize, true);
 
             do
             {
@@ -57,6 +56,7 @@ namespace Soddi.Services
                 else
                 {
                     isMoreToRead = false;
+                    _progress.Report((allReadsInKb, allReadsInKb));
                 }
             } while (isMoreToRead);
         }

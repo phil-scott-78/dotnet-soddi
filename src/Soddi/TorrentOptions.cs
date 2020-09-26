@@ -1,10 +1,12 @@
 ﻿using System;
-using System.IO;
+using System.Collections.Generic;
+using System.IO.Abstractions;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandLine;
+using JetBrains.Annotations;
 using MediatR;
 using MonoTorrent;
 using MonoTorrent.Client;
@@ -12,32 +14,52 @@ using Spectre.Console;
 
 namespace Soddi
 {
-    [Verb("torrent", HelpText = "Download database via BitTorrent")]
+    [Verb("torrent", HelpText = "Download database via BitTorrent"), UsedImplicitly]
     public class TorrentOptions : IRequest<int>
     {
+        public TorrentOptions(string archive, string output, bool enablePortForwarding)
+        {
+            Archive = archive;
+            Output = output;
+            EnablePortForwarding = enablePortForwarding;
+        }
+
         [Value(0, HelpText = "Archive to download", Required = true, MetaName = "Archive")]
-        public string Archive { get; set; } = string.Empty;
+        public string Archive { get; }
 
         [Option('o', "output", HelpText = "Output folder")]
-        public string Output { get; set; } = string.Empty;
+        public string Output { get; }
+
+        [Option('f', "portForward", HelpText = "Enable port forwarding", Default = false)]
+        public bool EnablePortForwarding { get; }
     }
 
     public class TorrentHandler : IRequestHandler<TorrentOptions, int>
     {
+        private readonly IFileSystem _fileSystem;
+
+        public TorrentHandler(IFileSystem fileSystem)
+        {
+            _fileSystem = fileSystem;
+        }
+
         public async Task<int> Handle(TorrentOptions request, CancellationToken cancellationToken)
         {
             var outputPath = request.Output;
             if (string.IsNullOrWhiteSpace(outputPath))
             {
-                outputPath = Directory.GetCurrentDirectory();
+                outputPath = _fileSystem.Directory.GetCurrentDirectory();
             }
 
-            if (!Directory.Exists(outputPath))
+            if (!_fileSystem.Directory.Exists(outputPath))
             {
                 throw new SoddiException($"Output path {outputPath} not found");
             }
 
-            Console.WriteLine("Finding torrent...");
+            var paddingFolder = _fileSystem.Path.Combine(outputPath, ".____padding_file");
+            var doesPaddingFolderExistToStart = _fileSystem.Directory.Exists(paddingFolder);
+
+            Console.WriteLine("Finding archive files...");
 
             var parser = new AvailableArchiveParser();
             var results = await parser.Get(cancellationToken);
@@ -49,22 +71,47 @@ namespace Soddi
                 throw new SoddiException($"Archive named {request.Archive} not found");
             }
 
+            Console.WriteLine("Loading torrent...");
             const string url = "https://archive.org/download/stackexchange/stackexchange_archive.torrent";
             var httpClient = new HttpClient();
             var torrentContents = await httpClient.GetByteArrayAsync(url);
+
 
             EngineSettings settings = new EngineSettings
             {
                 AllowedEncryption = EncryptionTypes.All, SavePath = outputPath
             };
 
-            if (!Directory.Exists(settings.SavePath))
-            {
-                Directory.CreateDirectory(settings.SavePath);
-            }
-
             Console.WriteLine("Initializing BitTorrent engine...");
             var engine = new ClientEngine(settings);
+
+            if (request.EnablePortForwarding)
+            {
+                Console.WriteLine("Attempting to forward ports");
+                await engine.EnablePortForwardingAsync(cancellationToken);
+
+                // This is how to access the list of port mappings, and to see if they were
+                // successful, pending or failed. If they failed it could be because the public port
+                // is already in use by another computer on your network.
+                foreach (var successfulMapping in engine.PortMappings.Created)
+                {
+                    Console.WriteLine(
+                        $"  Mapped {successfulMapping.Protocol}: {successfulMapping.PrivatePort}->{successfulMapping.PublicPort}");
+                }
+
+                foreach (var failedMapping in engine.PortMappings.Failed)
+                {
+                    Console.WriteLine(
+                        $"  Failed mapping {failedMapping.Protocol}: {failedMapping.PrivatePort}->{failedMapping.PublicPort}");
+                }
+
+                foreach (var failedMapping in engine.PortMappings.Pending)
+                {
+                    Console.WriteLine(
+                        $"  Pending but probably failed mapping {failedMapping.Protocol}: {failedMapping.PrivatePort}->{failedMapping.PublicPort}");
+                }
+            }
+
             Torrent torrent = await Torrent.LoadAsync(torrentContents);
             foreach (var torrentFile in torrent.Files)
             {
@@ -78,114 +125,49 @@ namespace Soddi
             TorrentManager manager = new TorrentManager(
                 torrent,
                 outputPath,
-                new TorrentSettings());
+                new TorrentSettings(), string.Empty);
 
             await engine.Register(manager);
             await engine.StartAll();
 
-
             Console.CursorVisible = false;
             Console.Clear();
 
-            // we don't want to clear if we don't have to. so we'll keep track of the hash values
-            // of some things that will indicate whether or not we need to redraw the whole screen
+            // we don't want to clear if we don't have to. so we'll keep track of some values of what is on
+            // screen so we only refresh when we need to
             var clearHash = -1;
 
             while (manager.State != TorrentState.Stopped && manager.State != TorrentState.Seeding)
             {
                 var newClearHash = 0;
-                var tableWrapper = new Table() {Border = Border.None, ShowHeaders = false};
-                tableWrapper.AddColumn("dummy");
+
 
                 Console.SetCursorPosition(0, 0);
 
-                var engineTable = new Table {ShowHeaders = false};
-                engineTable.AddColumns("Desc", "Value");
-                engineTable.AddRow(new Text("Total Upload Rate"),
-                    new Markup($"{engine.TotalDownloadSpeed / 1024.0:0.00}kB/s"));
-                engineTable.AddRow(new Text("Total Download Rate"),
-                    new Markup($"{engine.TotalUploadSpeed / 1024.0:0.00}kB/s"));
-                engineTable.AddRow(new Text("Disk Read Rate"),
-                    new Markup($"{engine.DiskManager.ReadRate / 1024.0:0.00}kB/s"));
-                engineTable.AddRow(new Text("Disk Write Rate"),
-                    new Markup($"{engine.DiskManager.WriteRate / 1024.0:0.00}kB/s"));
-                engineTable.AddRow(new Text("Total Read"),
-                    new Markup($"{engine.DiskManager.TotalRead / 1024.0:0.00}kB/s"));
-                engineTable.AddRow(new Text("Total Written"),
-                    new Markup($"{engine.DiskManager.TotalWritten / 1024.0:0.00}kB/s"));
-                engineTable.AddRow(new Text("Open Connections"),
-                    new Markup($"{engine.ConnectionManager.OpenConnections}"));
-                engineTable.AddRow(new Text("Half Open Connections"),
-                    new Markup($"{engine.ConnectionManager.HalfOpenConnections}"));
-
-
-                // AnsiConsole.Render(engineTable);
-
-                var torrentTable = new Table {ShowHeaders = false, Border = Border.Rounded};
-                torrentTable.AddColumns("Desc", "Value");
-                torrentTable.AddRow("State", manager.State.ToString());
-                torrentTable.AddRow("Name", manager.Torrent == null ? "MetaDataMode" : manager.Torrent.Name);
-                // torrentTable.AddRow("Progress", manager.Progress.ToString(CultureInfo.InvariantCulture));
-                torrentTable.AddRow("Download Speed", $"{manager.Monitor.DownloadSpeed / 1024.0:0.00} kB/s");
-                torrentTable.AddRow("Upload Speed", $"{manager.Monitor.UploadSpeed / 1024.0:0.00} kB/s");
-
-                torrentTable.AddRow("Total Downloaded",
-                    $"{manager.Monitor.DataBytesDownloaded / (1024.0 * 1024.0):0.00} MB");
-                torrentTable.AddRow("Total Uploaded",
-                    $"{manager.Monitor.DataBytesUploaded / (1024.0 * 1024.0):0.00} MB");
-
-
-                var trackerTable = new Table();
-                trackerTable.AddColumns("Tracker", "Last announce");
-                foreach (var trackerManagerTier in manager.TrackerManager.Tiers)
-                {
-                    var activeTracker = trackerManagerTier.ActiveTracker.ToString();
-                    if (activeTracker != null)
-                    {
-                        trackerTable.AddRow(new Text(activeTracker),
-                            new Text(trackerManagerTier.LastAnnounceSucceeded.ToString()));
-                    }
-                }
+                var torrentTable = BuildTorrentOverviewTable(manager);
+                var trackerTable = BuildTrackerTable(manager);
 
                 newClearHash += manager.TrackerManager.Tiers.Count;
 
-                var peerTable = new Table {Border = Border.Rounded};
-                peerTable.AddColumns("Peer", "Pieces", "Download Speed", "Upload Speed");
                 var peers = await manager.GetPeersAsync();
-                foreach (var peerId in peers)
-                {
-                    peerTable.AddRow(
-                        new Text(peerId.Uri.ToString()),
-                        new Text(peerId.AmRequestingPiecesCount.ToString()),
-                        new Text($"{peerId.Monitor.DownloadSpeed / 1024.0:0.00} kB/s"),
-                        new Text($"{peerId.Monitor.UploadSpeed / 1024.0:0.00} kB/s"));
-                }
-
+                var peerTable = BuildPeerTable(peers);
                 newClearHash += peers.Count * 100;
 
+
+                var tableWrapper = GetEmptyContainerTable();
                 var mainStatusTable = GetEmptyContainerTable(2);
                 mainStatusTable.AddRow(torrentTable, trackerTable);
+
                 tableWrapper.AddRow(mainStatusTable);
                 tableWrapper.AddRow(peerTable);
 
                 if (manager.Torrent != null)
                 {
-                    var torrentListTable = new Table {Border = Border.Rounded};
-                    torrentListTable.AddColumns("Archive File", "Downloaded", "Size", "Percent");
-                    foreach (var file in manager.Torrent.Files.Where(i => i.Priority != Priority.DoNotDownload))
-                    {
-                        torrentListTable.AddRow(
-                            file.Path,
-                            $"{file.BytesDownloaded / (1024.0 * 1024.0):0.00} MB",
-                            $"{file.Length / (1024.0 * 1024.0):0.00} MB",
-                            $"{file.BitField.PercentComplete / 100:P1}");
-                    }
+                    var torrentListTable = BuildTorrentListTable(manager);
+                    tableWrapper.AddRow(torrentListTable);
 
                     newClearHash += manager.Torrent.Files.Count(i => i.Priority != Priority.DoNotDownload) * 1000;
-
-                    tableWrapper.AddRow(torrentListTable);
                 }
-
 
                 if (newClearHash != clearHash)
                 {
@@ -199,9 +181,94 @@ namespace Soddi
                 Thread.Sleep(500);
             }
 
-            Console.WriteLine("Download complete");
 
+            await manager.StopAsync();
+            await engine.StopAllAsync();
+
+            try
+            {
+                // the stackoverflow torrent files, and I think all of archive.org
+                // seem to have these padding files that sneak into the download even
+                // if they aren't included in the file list. not quite sure how to prevent that
+                // so I'm gonna delete them after the fact I guess
+                if (!doesPaddingFolderExistToStart && _fileSystem.Directory.Exists(paddingFolder))
+                {
+                    _fileSystem.Directory.Delete(paddingFolder, true);
+                }
+            }
+            catch
+            {
+                /* swallow */
+            }
+
+            Console.WriteLine("Download complete");
             return await Task.FromResult(0);
+        }
+
+        private static Table BuildTorrentListTable(TorrentManager manager)
+        {
+            var torrentListTable = new Table {Border = Border.Rounded};
+            torrentListTable.AddColumns("Archive File", "Downloaded", "Size", "Percent");
+            foreach (var file in manager.Torrent.Files.Where(i => i.Priority != Priority.DoNotDownload))
+            {
+                torrentListTable.AddRow(
+                    file.Path,
+                    $"{file.BytesDownloaded / (1024.0 * 1024.0):0.00} MB",
+                    $"{file.Length / (1024.0 * 1024.0):0.00} MB",
+                    $"{file.BitField.PercentComplete / 100:P1}");
+            }
+
+            return torrentListTable;
+        }
+
+        private static Table BuildTorrentOverviewTable(TorrentManager manager)
+        {
+            var torrentTable = new Table {ShowHeaders = false, Border = Border.Rounded};
+            torrentTable.AddColumns("Desc", "Value");
+            torrentTable.AddRow("State", manager.State.ToString());
+            torrentTable.AddRow("Name", manager.Torrent == null ? "MetaDataMode" : manager.Torrent.Name);
+            // torrentTable.AddRow("Progress", manager.Progress.ToString(CultureInfo.InvariantCulture));
+            torrentTable.AddRow("Download Speed", $"{manager.Monitor.DownloadSpeed / 1024.0:0.00} kB/s");
+            torrentTable.AddRow("Upload Speed", $"{manager.Monitor.UploadSpeed / 1024.0:0.00} kB/s");
+
+            torrentTable.AddRow("Total Downloaded",
+                $"{manager.Monitor.DataBytesDownloaded / (1024.0 * 1024.0):0.00} MB");
+            torrentTable.AddRow("Total Uploaded",
+                $"{manager.Monitor.DataBytesUploaded / (1024.0 * 1024.0):0.00} MB");
+            return torrentTable;
+        }
+
+        private static Table BuildTrackerTable(TorrentManager manager)
+        {
+            var trackerTable = new Table {Border = Border.Rounded};
+            trackerTable.AddColumns("Tracker", "Last announce");
+            foreach (var trackerManagerTier in manager.TrackerManager.Tiers)
+            {
+                var activeTracker = trackerManagerTier.ActiveTracker.ToString();
+                if (activeTracker != null)
+                {
+                    trackerTable.AddRow(new Text(activeTracker),
+                        new Text(trackerManagerTier.LastAnnounceSucceeded.ToString()));
+                }
+            }
+
+            return trackerTable;
+        }
+
+        private static Table BuildPeerTable(IEnumerable<PeerId> peers)
+        {
+            var peerTable = new Table {Border = Border.Rounded};
+            peerTable.AddColumns("Peer", "Pieces", "Download Speed", "Upload Speed");
+            foreach (var peerId in peers)
+            {
+                peerTable.AddRow(
+                    new Text(peerId.Uri.ToString()),
+                    new Text(peerId.AmRequestingPiecesCount.ToString()),
+                    new Text($"{peerId.Monitor.DownloadSpeed / 1024.0:0.00} kB/s"),
+                    new Text($"{peerId.Monitor.UploadSpeed / 1024.0:0.00} kB/s"));
+            }
+
+            return peerTable;
         }
 
         private static Table GetEmptyContainerTable(int columns = 1)

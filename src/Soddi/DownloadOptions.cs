@@ -1,37 +1,53 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
+using System.IO.Abstractions;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandLine;
+using JetBrains.Annotations;
 using MediatR;
 using ShellProgressBar;
 using Soddi.Services;
 
+// ReSharper disable AccessToDisposedClosure
+
 namespace Soddi
 {
-    [Verb("download", HelpText = "Download database")]
+    [Verb("download", HelpText = "Download database"), UsedImplicitly]
     public class DownloadOptions : IRequest<int>
     {
+        public DownloadOptions(string archive, string output)
+        {
+            Archive = archive;
+            Output = output;
+        }
+
         [Value(0, HelpText = "Archive to download", Required = true, MetaName = "Archive")]
-        public string Archive { get; set; } = string.Empty;
+        public string Archive { get; }
 
         [Option('o', "output", HelpText = "Output folder")]
-        public string Output { get; set; } = string.Empty;
+        public string Output { get; }
     }
 
     public class DownloadHandler : IRequestHandler<DownloadOptions, int>
     {
+        private readonly IFileSystem _fileSystem;
+
+        public DownloadHandler(IFileSystem fileSystem)
+        {
+            _fileSystem = fileSystem;
+        }
+
         public async Task<int> Handle(DownloadOptions request, CancellationToken cancellationToken)
         {
             var outputPath = request.Output;
             if (string.IsNullOrWhiteSpace(outputPath))
             {
-                outputPath = Directory.GetCurrentDirectory();
+                outputPath = _fileSystem.Directory.GetCurrentDirectory();
             }
 
-            if (!Directory.Exists(outputPath))
+            if (!_fileSystem.Directory.Exists(outputPath))
             {
                 throw new SoddiException($"Output path {outputPath} not found");
             }
@@ -48,7 +64,7 @@ namespace Soddi
                 throw new SoddiException($"Could not find archive named {request.Archive}");
             }
 
-            var masterProgress = new ProgressBar(
+            using var masterProgress = new ProgressBar(
                 (int)(archiveUrl.Uris.Sum(i => i.SizeInBytes) / 1024),
                 $"Downloading {request.Archive}",
                 ConsoleColor.Blue);
@@ -61,7 +77,7 @@ namespace Soddi
                     new ProgressBarOptions() {CollapseWhenFinished = true});
 
                 var childDownloaded = 0;
-                var progress = new Progress<(int downloadedInKb, int totalSizeInKb )>(i =>
+                var progress = new Progress<(int downloadedInKb, int totalSizeInKb)>(i =>
                 {
                     var (downloaded, totalSize) = i;
 
@@ -75,10 +91,12 @@ namespace Soddi
 
                 var downloader = new ArchiveDownloader(outputPath, progress);
                 var task = downloader.Go(uri.Uri, cancellationToken);
+
                 tasks.Add(task);
             });
 
             Task.WaitAll(tasks.ToArray());
+            masterProgress.Tick(masterProgress.MaxTicks, "Done");
             return await Task.FromResult(0);
         }
     }

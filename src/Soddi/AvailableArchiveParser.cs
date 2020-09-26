@@ -52,6 +52,8 @@ namespace Soddi
                 throw new Exception("Could not parse stackexchange_files.xml. XML Document was null");
             }
 
+            // we need to find all the items that point to a .7z file and pull out
+            // their size
             var items = doc.Root.Elements()
                 .Where(i => i.Element("format")?.Value == "7z")
                 .Select(i => new
@@ -61,20 +63,23 @@ namespace Soddi
                 })
                 .ToList();
 
+            // because stackoverflow is split into multiple files we need to group all these .7z files
+            // by everything to the left of a dash (if it exists). this way stackoverflow.com-posts,
+            // stackoverflow.com-comments all are grouped together while math.7z gets put into a grouping of one
             var names = items.Select(i => StripDashName(i.Name)).Distinct().ToArray();
 
             return names
-                .Select(name => new
+                .Select(archive => new
                 {
-                    name,
+                    name = archive,
                     uris = items
-                        .Where(i => StripDashName(i.Name) == name)
+                        .Where(i => StripDashName(i.Name) == archive)
                         .Select(i => new Archive.UriWithSize(new Uri(baseUrl + i.Name), long.Parse(i.Size))).ToList()
                 })
-                .Select(name => new Archive(
-                    name.name.Replace(".stackexchange.com.7z", ""),
-                    name.name.Replace(".7z", ""),
-                    name.uris));
+                .Select(archive => new Archive(
+                    shortName: archive.name.Replace(".stackexchange.com.7z", ""),
+                    longName: archive.name.Replace(".7z", ""),
+                    archive.uris));
         }
 
         private static string StripDashName(string input)

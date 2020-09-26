@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Data.SqlClient;
 
 namespace Soddi.Tasks.SqlServer
@@ -14,6 +15,8 @@ namespace Soddi.Tasks.SqlServer
 
         public void Go(IProgress<(string message, int weight)> progress)
         {
+            CheckIfAlreadyExists();
+
             var statements = Sql.Split("GO");
             using var sqlConn = new SqlConnection(_connectionString);
             sqlConn.Open();
@@ -25,6 +28,31 @@ namespace Soddi.Tasks.SqlServer
                 using var command = new SqlCommand(statement, sqlConn);
                 command.ExecuteNonQuery();
                 progress.Report(("Creating objects", incrementValue));
+            }
+        }
+
+        private void CheckIfAlreadyExists()
+        {
+            var sql = @"SELECT TABLE_NAME
+    FROM INFORMATION_SCHEMA.TABLES 
+    WHERE TABLE_SCHEMA = 'dbo' 
+    AND  TABLE_NAME in ('Badges', 'Comments', 'LinkTypes', 'PostHistory', 'PostHistoryTypes', 'PostLinks', 'Posts', 'PostTypes', 'Tags', 'Users', 'Votes', 'VoteTypes')";
+
+            using var sqlConn = new SqlConnection(_connectionString);
+            sqlConn.Open();
+            using var sqlCommand = new SqlCommand(sql, sqlConn);
+
+            var tablesThatAlreadyExist = new List<string>();
+            using var dr = sqlCommand.ExecuteReader();
+            while (dr.Read())
+            {
+                tablesThatAlreadyExist.Add(dr.GetString(0));
+            }
+
+            if (tablesThatAlreadyExist.Count > 0)
+            {
+                throw new SoddiException(
+                    $"Schema already exists in database {_connectionString}.\n\tTables: {string.Join(", ", tablesThatAlreadyExist)}.\n\nTo drop and recreate the database use the --dropAndCreate option");
             }
         }
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
+using System.IO.Abstractions;
 using System.Linq;
 using SharpCompress.Archives.SevenZip;
 
@@ -8,18 +9,20 @@ namespace Soddi.Services
 {
     public class ArchiveProcessor : IArchivedDataProcessor
     {
+        private readonly IFileSystem _fileSystem;
         private readonly string[] _paths;
 
-        public ArchiveProcessor(string[] paths)
+        public ArchiveProcessor(string[] paths, IFileSystem? fileSystem = null)
         {
             _paths = paths;
+            _fileSystem = fileSystem ?? new FileSystem();
         }
 
         public IEnumerable<(string fileName, Stream stream, int size)> GetFiles()
         {
             foreach (var path in _paths)
             {
-                var stream = File.OpenRead(path);
+                var stream = _fileSystem.File.OpenRead(path);
                 var archive =
                     SevenZipArchive.Open(stream);
                 var allArchiveEntries = archive.ExtractAllEntries();
@@ -58,28 +61,29 @@ namespace Soddi.Services
 
     public class FolderProcessor : IArchivedDataProcessor
     {
+        private readonly IFileSystem _fileSystem;
         private readonly string _path;
 
-        public FolderProcessor(string path)
+        public FolderProcessor(string path, IFileSystem? fileSystem = null)
         {
             _path = path;
+            _fileSystem = fileSystem ?? new FileSystem();
         }
 
         public IEnumerable<(string fileName, Stream stream, int size)> GetFiles()
         {
-            var files = Directory.GetFiles(_path, "*.xml");
+            var files = _fileSystem.Directory.GetFiles(_path, "*.xml");
             foreach (var file in files)
             {
-                var fileInfo = new FileInfo(file);
-                yield return (Path.GetFileName(file).ToLowerInvariant(), fileInfo.OpenRead(),
+                var fileInfo = _fileSystem.FileInfo.FromFileName(file);
+                yield return (_fileSystem.Path.GetFileName(file).ToLowerInvariant(), fileInfo.OpenRead(),
                     (int)Math.Min(int.MaxValue, fileInfo.Length));
             }
         }
 
         public long GetTotalFileSize()
         {
-            return Directory.GetFiles(_path, "*.xml")
-                .Select(i => new FileInfo(i))
+            return _fileSystem.Directory.GetFiles(_path, "*.xml").Select(i => _fileSystem.FileInfo.FromFileName(i))
                 .Sum(i => i.Length);
         }
     }
