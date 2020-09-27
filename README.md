@@ -9,6 +9,14 @@ Inspirited by the original [Soddi](https://github.com/BrentOzarULTD/soddi), DotN
 - Discover archives from the command line.
 - Download archive files via BitTorrent based on their site name.
 
+## Limitations
+
+Not all features of Soddi are supported.
+
+- The PostTag table isn't supported yet. See [Issue #1](https://github.com/phil-scott-78/dotnet-soddi/issues/1)
+- It's only for SQL Server.
+- Full Text isn't supported.
+
 ## Usage
 
 ### `soddi download`
