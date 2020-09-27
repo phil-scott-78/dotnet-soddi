@@ -5,6 +5,7 @@ using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandLine;
+using CommandLine.Text;
 using JetBrains.Annotations;
 using MediatR;
 using ShellProgressBar;
@@ -14,7 +15,8 @@ using Soddi.Services;
 
 namespace Soddi
 {
-    [Verb("download", HelpText = "Download database"), UsedImplicitly]
+    [Verb("download", HelpText = "Download the most recent data dump for a Stack Overflow site from archive.org"),
+     UsedImplicitly]
     public class DownloadOptions : IRequest<int>
     {
         public DownloadOptions(string archive, string output)
@@ -28,6 +30,18 @@ namespace Soddi
 
         [Option('o', "output", HelpText = "Output folder")]
         public string Output { get; }
+
+        [Usage(ApplicationAlias = "soddi")]
+        public static IEnumerable<Example> Examples
+        {
+            get
+            {
+                yield return new Example("download archive for aviation.stackexchange.com",
+                    new DownloadOptions("aviation", ""));
+                yield return new Example("download archive for math.stackexchange.com to a particular folder",
+                    new DownloadOptions("math", "c:\\stack-data"));
+            }
+        }
     }
 
     public class DownloadHandler : IRequestHandler<DownloadOptions, int>

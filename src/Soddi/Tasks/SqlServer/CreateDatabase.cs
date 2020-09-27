@@ -3,6 +3,38 @@ using System.Data.SqlClient;
 
 namespace Soddi.Tasks.SqlServer
 {
+    public class VerifyDatabaseExists : ITask
+    {
+        private readonly string _connectionString;
+        private readonly string _databaseName;
+
+        public VerifyDatabaseExists(string connectionString, string databaseName)
+        {
+            _connectionString = connectionString;
+            _databaseName = databaseName;
+        }
+
+        public void Go(IProgress<(string message, int weight)> progress)
+        {
+            string sql = $"select COUNT(*) from sys.databases where name = '{_databaseName}'";
+            using var sqlConn = new SqlConnection(_connectionString);
+            using var sqlCommand = new SqlCommand(sql, sqlConn);
+
+            sqlConn.Open();
+            var result = (int)sqlCommand.ExecuteScalar();
+            if (result == 0)
+            {
+                throw new SoddiException(
+                    $"Database {_databaseName} does not exists.\nDatabase must exist, or use the --dropAndCreate option to build a default database.");
+            }
+        }
+
+        public int GetTaskWeight()
+        {
+            return 100;
+        }
+    }
+
     public class CreateDatabase : ITask
     {
         private readonly string _connectionString;

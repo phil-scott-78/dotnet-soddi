@@ -4,10 +4,11 @@ using System.Linq;
 using System.Reflection;
 using System.Threading.Tasks;
 using CommandLine;
+using CommandLine.Text;
 using JetBrains.Annotations;
 using Lamar;
 using MediatR;
-using MediatR.Pipeline;
+using Spectre.Console;
 
 namespace Soddi
 {
@@ -17,11 +18,12 @@ namespace Soddi
         public static async Task<int> Main(string[] args)
         {
 #if DEBUG
-            // args = new[] {"create", @"C:\Users\phils\Downloads\aviation.stackexchange.com\", "--dropAndCreate"};
+            // args = new[] {"import", @"C:\Users\phils\Downloads\aviation.stackexchange.com\", "--dropAndCreate"};
             // args = new[] {"list", "-p", "stack"};
             // args = new[] {"download", "space"};
             // args = new[] {"torrent", "math"};
-            args = new[] {"create", @"e:\torrent-data\aviation.stackexchange.com.7z"};
+            //args = new[] {"oport", @"e:\torrent-data\aviation.stackexchange.com.7z", "-d", "aviation"};
+            args = new string[] {"help", "torrent"};
 #endif
 
             // find all classes that implement IRequest<int>. They are the verbs
@@ -32,11 +34,45 @@ namespace Soddi
                 .Where(t => t.GetInterfaces().Contains(typeof(IRequest<int>)))
                 .ToArray();
 
+
             // parse the command lines and cast the parsed command line argument
             // back into IRequest<int>.
-            var parserResult = Parser.Default.ParseArguments(args, commands);
-            if (!(parserResult is Parsed<object> parser)) return 1;
-            if (!(parser.Value is IRequest<int> request)) return 1;
+            var parser = new Parser();
+            var parserResult = parser.ParseArguments(args, commands);
+
+            if (!(parserResult is Parsed<object> parsed))
+            {
+                var regularSentenceBuilder = SentenceBuilder.Create();
+                SentenceBuilder.Factory = () => new MarkedUpSentenceBuilder(regularSentenceBuilder);
+                var s = HelpText.AutoBuild(parserResult, text =>
+                {
+                    var notParsed = (NotParsed<object>)parserResult;
+
+                    var helpVerb = notParsed.Errors.OfType<HelpVerbRequestedError>().FirstOrDefault();
+                    var verb = helpVerb?.Type?.GetCustomAttributes().OfType<VerbAttribute>().FirstOrDefault();
+                    if (verb != null && !string.IsNullOrWhiteSpace(verb.HelpText))
+                    {
+                        text.Heading = verb.HelpText;
+                        text.Copyright = string.Empty;
+                    }
+                    else
+                    {
+                        text.Heading = "Download and import Stack Overflow archive data.";
+                        text.Copyright = "";
+                    }
+
+                    text.AdditionalNewLineAfterOption = false;
+                    text.AddNewLineBetweenHelpSections = true;
+
+                    return text;
+                }, AnsiConsole.Width);
+
+
+                AnsiConsole.MarkupLine(s.ToString());
+                return 1;
+            }
+
+            if (!(parsed.Value is IRequest<int> request)) return 1;
 
             using var container = BuildContainer();
             var mediator = container.GetInstance<IMediator>();

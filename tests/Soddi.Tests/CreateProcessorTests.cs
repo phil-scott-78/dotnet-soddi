@@ -5,7 +5,7 @@ using Shouldly;
 using Soddi.Services;
 using Xunit;
 
-namespace Soddi.Tests.DatabaseHelperTests
+namespace Soddi.Tests
 {
     public class CreateProcessorTests
     {
@@ -22,10 +22,10 @@ namespace Soddi.Tests.DatabaseHelperTests
                 {"archive.7z", new MockFileData("")}
             });
 
-            var dbHelper = new DatabaseHelpers(mockFileSystem);
+            var processorFactory = new ProcessorFactory(mockFileSystem);
             Should.Throw<SoddiException>(() =>
             {
-                dbHelper.VerifyAndCreateProcessor("not-archive.7z");
+                processorFactory.VerifyAndCreateProcessor("not-archive.7z");
             });
         }
 
@@ -37,8 +37,8 @@ namespace Soddi.Tests.DatabaseHelperTests
                 {"archive.7z", new MockFileData("")}
             });
 
-            var dbHelper = new DatabaseHelpers(mockFileSystem);
-            var processor = dbHelper.VerifyAndCreateProcessor("archive.7z");
+            var processorFactory = new ProcessorFactory(mockFileSystem);
+            var processor = processorFactory.VerifyAndCreateProcessor("archive.7z");
             processor.ShouldBeOfType<ArchiveProcessor>();
         }
 
@@ -50,11 +50,11 @@ namespace Soddi.Tests.DatabaseHelperTests
                 {"archive.zip", new MockFileData("")}
             });
 
-            var dbHelper = new DatabaseHelpers(mockFileSystem);
+            var processorFactory = new ProcessorFactory(mockFileSystem);
 
             Should.Throw<SoddiException>(() =>
                 {
-                    var processor = dbHelper.VerifyAndCreateProcessor("archive.zip");
+                    processorFactory.VerifyAndCreateProcessor("archive.zip");
                 }
             );
         }
@@ -65,9 +65,9 @@ namespace Soddi.Tests.DatabaseHelperTests
             var files = s_expectedFiles.ToDictionary(s => "archive/" + s + ".7z", s => new MockFileData("test"));
             var mockFileSystem = new MockFileSystem(files);
 
-            var dbHelper = new DatabaseHelpers(mockFileSystem);
+            var processorFactory = new ProcessorFactory(mockFileSystem);
 
-            var processor = dbHelper.VerifyAndCreateProcessor("archive");
+            var processor = processorFactory.VerifyAndCreateProcessor("archive");
             processor.ShouldBeOfType<ArchiveProcessor>();
         }
 
@@ -78,9 +78,9 @@ namespace Soddi.Tests.DatabaseHelperTests
             var files = s_expectedFiles.ToDictionary(s => "archive/" + s + ".xml", s => new MockFileData("test"));
             var mockFileSystem = new MockFileSystem(files);
 
-            var dbHelper = new DatabaseHelpers(mockFileSystem);
+            var processorFactory = new ProcessorFactory(mockFileSystem);
 
-            var processor = dbHelper.VerifyAndCreateProcessor("archive");
+            var processor = processorFactory.VerifyAndCreateProcessor("archive");
             processor.ShouldBeOfType<FolderProcessor>();
         }
 
@@ -92,11 +92,11 @@ namespace Soddi.Tests.DatabaseHelperTests
                 Dictionary<string, MockFileData> {{"archive/blogs.xml", new MockFileData("")}}
             );
 
-            var dbHelper = new DatabaseHelpers(mockFileSystem);
+            var processorFactory = new ProcessorFactory(mockFileSystem);
 
             Should.Throw<SoddiException>(() =>
             {
-                dbHelper.VerifyAndCreateProcessor("archive");
+                processorFactory.VerifyAndCreateProcessor("archive");
             });
         }
 
@@ -110,11 +110,27 @@ namespace Soddi.Tests.DatabaseHelperTests
 
             var mockFileSystem = new MockFileSystem(files);
 
-            var dbHelper = new DatabaseHelpers(mockFileSystem);
+            var processorFactory = new ProcessorFactory(mockFileSystem);
 
             Should.Throw<SoddiException>(() =>
             {
-                dbHelper.VerifyAndCreateProcessor("archive");
+                processorFactory.VerifyAndCreateProcessor("archive");
+            });
+        }
+
+
+        [Fact]
+        public void Directory_with_no_xml_and_7z_files_throw_exception()
+        {
+            var mockFileSystem = new MockFileSystem(new
+                Dictionary<string, MockFileData> {{"archive/blogs.zip", new MockFileData("")}}
+            );
+
+            var processorFactory = new ProcessorFactory(mockFileSystem);
+
+            Should.Throw<SoddiException>(() =>
+            {
+                processorFactory.VerifyAndCreateProcessor("archive");
             });
         }
     }

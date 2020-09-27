@@ -6,7 +6,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
 
-namespace Soddi
+namespace Soddi.Services
 {
     public class Archive
     {

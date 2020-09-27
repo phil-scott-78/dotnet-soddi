@@ -1,7 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Data.SqlClient;
-using System.IO;
 using System.IO.Abstractions;
 using System.Linq;
 using JetBrains.Annotations;
@@ -9,10 +7,14 @@ using JetBrains.Annotations;
 namespace Soddi.Services
 {
     [UsedImplicitly]
-    public class DatabaseHelpers
+    public class ProcessorFactory
     {
         private readonly IFileSystem _fileSystem;
-        public DatabaseHelpers(IFileSystem fileSystem) => _fileSystem = fileSystem;
+
+        public ProcessorFactory(IFileSystem fileSystem)
+        {
+            _fileSystem = fileSystem;
+        }
 
         public IArchivedDataProcessor VerifyAndCreateProcessor(string requestPath)
         {
@@ -65,7 +67,8 @@ namespace Soddi.Services
                 "Folder doesn't appear to contain any data files. All .xml or .7z files are required to exist for processing.");
         }
 
-        private void AssertProperFiles(IEnumerable<string> expectedFiles, IFileInfo[] foundFiles,
+
+        private static void AssertProperFiles(IEnumerable<string> expectedFiles, IFileInfo[] foundFiles,
             string extension)
         {
             var missing = expectedFiles
@@ -78,46 +81,6 @@ namespace Soddi.Services
                                          string.Join(", ",
                                              missing.Select(missingFile => $"\"{missingFile}.{extension}\"")));
             }
-        }
-
-        public (string master, string database) GetMasterAndDbConnectionStrings(string connectionString,
-            string databaseName)
-        {
-            var master = new SqlConnectionStringBuilder(connectionString) {InitialCatalog = "master"}
-                .ConnectionString;
-
-            var database = new SqlConnectionStringBuilder(connectionString) {InitialCatalog = databaseName}
-                .ConnectionString;
-
-            return (master, database);
-        }
-
-        public string GetDbNameFromPathOption(string databaseName, string path)
-        {
-            string dbName;
-            if (!string.IsNullOrWhiteSpace(databaseName))
-            {
-                dbName = databaseName;
-            }
-            else
-            {
-                if (_fileSystem.Directory.Exists(path))
-                {
-                    dbName = _fileSystem.DirectoryInfo.FromDirectoryName(path).Name;
-                }
-                else if (_fileSystem.File.Exists(path))
-                {
-                    dbName = _fileSystem.Path.GetFileNameWithoutExtension(path);
-                }
-                else
-                {
-                    // we should have already verified the path is good at this point
-                    // so this isn't an application exception
-                    throw new FileNotFoundException("Database archive path not found", path);
-                }
-            }
-
-            return dbName;
         }
     }
 }

@@ -6,15 +6,17 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandLine;
+using CommandLine.Text;
 using JetBrains.Annotations;
 using MediatR;
 using MonoTorrent;
 using MonoTorrent.Client;
+using Soddi.Services;
 using Spectre.Console;
 
 namespace Soddi
 {
-    [Verb("torrent", HelpText = "Download database via BitTorrent"), UsedImplicitly]
+    [Verb("torrent", HelpText = "[bold red]Experimental[/]. Download database via BitTorrent"), UsedImplicitly]
     public class TorrentOptions : IRequest<int>
     {
         public TorrentOptions(string archive, string output, bool enablePortForwarding)
@@ -30,8 +32,22 @@ namespace Soddi
         [Option('o', "output", HelpText = "Output folder")]
         public string Output { get; }
 
-        [Option('f', "portForward", HelpText = "Enable port forwarding", Default = false)]
+        [Option('f', "portForward", HelpText = "[red]Experimental[/]. Enable port forwarding", Default = false)]
         public bool EnablePortForwarding { get; }
+        
+        [Usage(ApplicationAlias = "soddi")]
+        public static IEnumerable<Example> Examples
+        {
+            get
+            {
+                yield return new Example("Download files associated with the math site from the torrent file",
+                    new TorrentOptions("math", "", false));
+                yield return new Example("Download to a specific folder",
+                    new TorrentOptions("math", "c:\\torrent files", false));
+                yield return new Example("Enable port forwarding",
+                    new TorrentOptions("math", "", true));
+            }
+        }
     }
 
     public class TorrentHandler : IRequestHandler<TorrentOptions, int>

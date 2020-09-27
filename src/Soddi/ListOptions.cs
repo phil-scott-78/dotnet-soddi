@@ -1,16 +1,19 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandLine;
+using CommandLine.Text;
 using JetBrains.Annotations;
 using MediatR;
+using Soddi.Services;
 using Spectre.Console;
 
 namespace Soddi
 {
-    [Verb("list", HelpText = "List available database archives."), UsedImplicitly]
+    [Verb("list", HelpText = "List available Stack Overflow data dumps."), UsedImplicitly]
     public class ListOptions : IRequest<int>
     {
         public ListOptions(string pattern)
@@ -18,8 +21,21 @@ namespace Soddi
             Pattern = pattern;
         }
 
-        [Value(0, MetaName = "Pattern", HelpText = "Pattern to include (e.g. \"av\" includes all archives containing \"av\")")]
+        [Value(0, MetaName = "Pattern",
+            HelpText = "Pattern to include (e.g. \"av\" includes all archives containing \"av\").")]
         public string Pattern { get; }
+
+        [Usage(ApplicationAlias = "soddi")]
+        public static IEnumerable<Example> Examples
+        {
+            get
+            {
+                yield return new Example("List all archives",
+                    new ListOptions(""));
+                yield return new Example("List all archives containing the letters \"av\"",
+                    new ListOptions("av"));
+            }
+        }
     }
 
     public class ListHandler : IRequestHandler<ListOptions, int>
@@ -47,7 +63,8 @@ namespace Soddi
 
                 foreach (var archiveUri in archive.Uris)
                 {
-                    innerTable.AddRow(new Markup($"[link={archiveUri.Uri}]{archiveUri.Uri}[/]"), new Text(archiveUri.SizeInBytes.BytesToString()));
+                    innerTable.AddRow(new Markup($"[link={archiveUri.Uri}]{archiveUri.Uri}[/]"),
+                        new Text(archiveUri.SizeInBytes.BytesToString()));
                 }
 
                 table.AddRow(new Markup($"[white]{archive.ShortName}[/]"), innerTable);
