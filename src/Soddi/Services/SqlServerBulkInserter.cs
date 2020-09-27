@@ -34,7 +34,7 @@ namespace Soddi.Services
                 new SqlBulkCopy(connBuilder.ConnectionString,
                     SqlBulkCopyOptions.TableLock | SqlBulkCopyOptions.KeepIdentity)
                 {
-                    DestinationTableName = tableName, EnableStreaming = true, NotifyAfter = 500, BatchSize = 5000
+                    DestinationTableName = tableName, EnableStreaming = true, NotifyAfter = 1000, BatchSize = 10000
                 };
 
             for (var i = 0; i < dataReader.FieldCount; i++)
