@@ -16,12 +16,12 @@ namespace Soddi
     [Verb("list", HelpText = "List available Stack Overflow data dumps."), UsedImplicitly]
     public class ListOptions : IRequest<int>
     {
-        public ListOptions(string pattern)
+        public ListOptions(string pattern = "")
         {
             Pattern = pattern;
         }
 
-        [Value(0, MetaName = "Pattern",
+        [Value(0, MetaName = "Pattern", Required = false,
             HelpText = "Pattern to include (e.g. \"av\" includes all archives containing \"av\").")]
         public string Pattern { get; }
 
@@ -42,6 +42,7 @@ namespace Soddi
     {
         public async Task<int> Handle(ListOptions request, CancellationToken cancellationToken)
         {
+            var pattern = request.Pattern ?? "";
             var parser = new AvailableArchiveParser();
             var results = await parser.Get(cancellationToken);
 
@@ -50,7 +51,7 @@ namespace Soddi
             table.AddColumn(new TableColumn("Archive"));
 
 
-            foreach (var archive in results.Where(i => i.ShortName.Contains(request.Pattern)))
+            foreach (var archive in results.Where(i => i.ShortName.Contains(pattern)))
             {
                 var innerTable = new Table {Border = Border.None, ShowHeaders = false, Expand = true};
 
