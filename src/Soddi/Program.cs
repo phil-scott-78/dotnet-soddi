@@ -18,12 +18,12 @@ namespace Soddi
         public static async Task<int> Main(string[] args)
         {
 #if DEBUG
-            // args = new[] {"import", @"C:\Users\phils\Downloads\aviation.stackexchange.com\", "--dropAndCreate"};
+            args = new[] {"import", @"C:\Users\phils\Downloads\aviation.stackexchange.com\", "--dropAndCreate"};
             // args = new[] {"list", "-p", "stack"};
             // args = new[] {"download", "space"};
             // args = new[] {"torrent", "math"};
             //args = new[] {"oport", @"e:\torrent-data\aviation.stackexchange.com.7z", "-d", "aviation"};
-            args = new string[] {"help", "torrent"};
+            // args = new string[] {"help", "torrent"};
 #endif
 
             // find all classes that implement IRequest<int>. They are the verbs

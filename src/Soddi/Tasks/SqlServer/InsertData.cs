@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using Soddi.Services;
 
 namespace Soddi.Tasks.SqlServer
@@ -38,19 +39,31 @@ namespace Soddi.Tasks.SqlServer
 
             foreach (var (fileName, stream, _) in _processor.GetFiles())
             {
-                var sizePerRow = s_approxSizePerRow[fileName];
-                var totalBatchCount = 0L;
-                var inserter = new SqlServerBulkInserter(_connectionString, _dbName, l =>
+                using var blockingStream = new BlockingStream(1024 * 1024 * 1024);
+                var decrypt = Task.Factory.StartNew(() =>
                 {
-                    var diff = l - totalBatchCount;
-                    totalBatchCount = l;
-                    var min = diff * sizePerRow * weightPerByte;
-                    progress.Report(($"{fileName} ({l} rows read)", (int)min));
+                    stream.CopyTo(blockingStream);
+                    blockingStream.CompleteWriting();
                 });
 
-                // someone smarter than me might be able to figure out how to decrypt on one thread
-                // and bulk insert on another.
-                inserter.Insert(stream.AsDataReader(fileName), fileName);
+                var insert = Task.Factory.StartNew(() =>
+                {
+                    var sizePerRow = s_approxSizePerRow[fileName];
+                    var totalBatchCount = 0L;
+                    var inserter = new SqlServerBulkInserter(_connectionString, _dbName, l =>
+                    {
+                        var diff = l - totalBatchCount;
+                        totalBatchCount = l;
+                        var min = diff * sizePerRow * weightPerByte;
+                        progress.Report(($"{fileName} ({l} rows read)", (int)min));
+                    });
+
+                    // someone smarter than me might be able to figure out how to decrypt on one thread
+                    // and bulk insert on another.
+                    inserter.Insert(blockingStream.AsDataReader(fileName), fileName);
+                });
+
+                Task.WaitAll(decrypt, insert);
             }
         }
 
