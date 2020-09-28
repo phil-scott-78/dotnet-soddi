@@ -20,7 +20,7 @@ namespace Soddi.Tasks.SqlServer
 
             foreach (var statement in statements)
             {
-                using var command = new SqlCommand(statement, sqlConn) {CommandTimeout = 3600};
+                using var command = new SqlCommand(statement, sqlConn) { CommandTimeout = 3600 };
                 command.ExecuteNonQuery();
             }
         }

@@ -28,13 +28,16 @@ namespace Soddi.Services
         {
             var tableName = _fileSystem.Path.GetFileNameWithoutExtension(fileName);
 
-            var connBuilder = new SqlConnectionStringBuilder(_connectionString) {InitialCatalog = _dbName};
+            var connBuilder = new SqlConnectionStringBuilder(_connectionString) { InitialCatalog = _dbName };
 
             using var bc =
                 new SqlBulkCopy(connBuilder.ConnectionString,
                     SqlBulkCopyOptions.TableLock | SqlBulkCopyOptions.KeepIdentity)
                 {
-                    DestinationTableName = tableName, EnableStreaming = true, NotifyAfter = 1000, BatchSize = 10000
+                    DestinationTableName = tableName,
+                    EnableStreaming = true,
+                    NotifyAfter = 1000,
+                    BatchSize = 10000
                 };
 
             for (var i = 0; i < dataReader.FieldCount; i++)

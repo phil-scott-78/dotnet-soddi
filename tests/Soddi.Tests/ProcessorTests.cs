@@ -25,7 +25,7 @@ namespace Soddi.Tests
         [Fact]
         public void Can_process_seven_zip()
         {
-            var processor = new ArchiveProcessor(new[] {"test-files/eosio.meta.stackexchange.com.7z"});
+            var processor = new ArchiveProcessor(new[] { "test-files/eosio.meta.stackexchange.com.7z" });
 
             processor.GetTotalFileSize().ShouldBe(415_440);
             processor.GetFiles().Select(i => i.fileName)

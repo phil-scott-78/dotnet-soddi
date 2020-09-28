@@ -98,4 +98,6 @@ Enable port forwarding:
   -f, --portForward    (Default: false) Experimental. Enable port forwarding
   --help               Display this help screen.
   --version            Display version information.
-  Archive (pos. 0)     Required. Archive to download```
+  Archive (pos. 0)     Required. Archive to download
+  ```
+  

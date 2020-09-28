@@ -51,7 +51,10 @@ namespace Soddi.Tests
         public void Can_guess_database_name_from_a_filename()
         {
             var db = new DatabaseHelper(new MockFileSystem(
-                new Dictionary<string, MockFileData>() {{"aviation.stackexchange.7z", new MockFileData("")}}
+                new Dictionary<string, MockFileData>
+                {
+                    { "aviation.stackexchange.7z", new MockFileData("") }
+                }
             ));
             db.GetDbNameFromPathOption("", "aviation.stackexchange.7z").ShouldBe("aviation.stackexchange");
         }
@@ -60,7 +63,10 @@ namespace Soddi.Tests
         public void Can_guess_database_name_from_a_directory()
         {
             var db = new DatabaseHelper(new MockFileSystem(
-                new Dictionary<string, MockFileData>() {{"aviation.stackexchange/file.7z", new MockFileData("")}}
+                new Dictionary<string, MockFileData>
+                {
+                    { "aviation.stackexchange/file.7z", new MockFileData("") }
+                }
             ));
             db.GetDbNameFromPathOption("", "aviation.stackexchange").ShouldBe("aviation.stackexchange");
         }
@@ -68,8 +74,12 @@ namespace Soddi.Tests
         [Fact]
         public void Bad_path_throws_file_not_found()
         {
+            var files = new Dictionary<string, MockFileData>
+            {
+                { "aviation.stackexchange/file.7z", new MockFileData("") }
+            };
             var db = new DatabaseHelper(new MockFileSystem(
-                new Dictionary<string, MockFileData>() {{"aviation.stackexchange/file.7z", new MockFileData("")}}
+                files
             ));
 
             Should.Throw<FileNotFoundException>(() =>

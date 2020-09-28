@@ -18,7 +18,7 @@ namespace Soddi
         public static async Task<int> Main(string[] args)
         {
 #if DEBUG
-            args = new[] {"import", @"C:\Users\phils\Downloads\aviation.stackexchange.com\", "--dropAndCreate"};
+            args = new[] { "import", @"C:\Users\phils\Downloads\aviation.stackexchange.com\", "--dropAndCreate" };
             // args = new[] {"list", "-p", "stack"};
             // args = new[] {"download", "space"};
             // args = new[] {"torrent", "math"};

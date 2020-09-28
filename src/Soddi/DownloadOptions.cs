@@ -88,7 +88,7 @@ namespace Soddi
             Parallel.ForEach(archiveUrl.Uris, uri =>
             {
                 var child = masterProgress.Spawn((int)(uri.SizeInBytes / 1024), uri.Uri.AbsolutePath,
-                    new ProgressBarOptions() {CollapseWhenFinished = true});
+                    new ProgressBarOptions() { CollapseWhenFinished = true });
 
                 var childDownloaded = 0;
                 var progress = new Progress<(int downloadedInKb, int totalSizeInKb)>(i =>

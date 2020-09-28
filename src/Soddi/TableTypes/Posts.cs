@@ -1,4 +1,4 @@
-#nullable disable
+﻿#nullable disable
 // ReSharper disable UnusedType.Global
 // ReSharper disable UnusedMember.Global
 

@@ -15,7 +15,7 @@ namespace Soddi.Services
             .Assembly
             .GetTypes()
             .Where(i => i.HasAttribute<StackOverflowDataTable>())
-            .Select(i => new {Type = i, Attribute = i.GetAttribute<StackOverflowDataTable>()})
+            .Select(i => new { Type = i, Attribute = i.GetAttribute<StackOverflowDataTable>() })
             .ToDictionary(
                 i => i.Attribute.FileName,
                 i => typeof(XmlToDataReader<>).MakeGenericType(i.Type)

@@ -28,7 +28,7 @@ namespace Soddi.Services
                     throw new SoddiException("Only 7z archive files are supported");
                 }
 
-                return new ArchiveProcessor(new[] {requestPath}, _fileSystem);
+                return new ArchiveProcessor(new[] { requestPath }, _fileSystem);
             }
 
             if (!_fileSystem.Directory.Exists(requestPath))

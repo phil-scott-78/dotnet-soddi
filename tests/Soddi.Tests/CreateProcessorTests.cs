@@ -1,4 +1,4 @@
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.IO.Abstractions.TestingHelpers;
 using System.Linq;
 using Shouldly;
@@ -89,7 +89,7 @@ namespace Soddi.Tests
         public void Directory_with_missing_7z_files_throws_exception()
         {
             var mockFileSystem = new MockFileSystem(new
-                Dictionary<string, MockFileData> {{"archive/blogs.xml", new MockFileData("")}}
+                Dictionary<string, MockFileData> { { "archive/blogs.xml", new MockFileData("") } }
             );
 
             var processorFactory = new ProcessorFactory(mockFileSystem);
@@ -123,7 +123,7 @@ namespace Soddi.Tests
         public void Directory_with_no_xml_and_7z_files_throw_exception()
         {
             var mockFileSystem = new MockFileSystem(new
-                Dictionary<string, MockFileData> {{"archive/blogs.zip", new MockFileData("")}}
+                Dictionary<string, MockFileData> { { "archive/blogs.zip", new MockFileData("") } }
             );
 
             var processorFactory = new ProcessorFactory(mockFileSystem);
