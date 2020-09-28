@@ -50,7 +50,7 @@ namespace Soddi
         [Option("skipConstraints", HelpText = "Skip adding primary keys and unique constraints.", Default = false)]
         public bool SkipPrimaryKeys { get; }
 
-        [Usage(ApplicationAlias = "soddi")]
+        [Usage(ApplicationAlias = "soddi"), UsedImplicitly]
         public static IEnumerable<Example> Examples
         {
             get

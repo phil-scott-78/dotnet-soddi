@@ -38,12 +38,12 @@ namespace Soddi.Services
     {
         public async Task<IEnumerable<Archive>> Get(CancellationToken cancellationToken)
         {
-            const string baseUrl = "https://archive.org/download/stackexchange/";
-            const string downloadUrl = baseUrl + "stackexchange_files.xml";
+            const string BaseUrl = "https://archive.org/download/stackexchange/";
+            const string DownloadUrl = BaseUrl + "stackexchange_files.xml";
 
             var client = new HttpClient();
             using var response = client
-                .GetAsync(downloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).Result;
+                .GetAsync(DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).Result;
             var stream = await response.Content.ReadAsStreamAsync();
 
             var doc = await XDocument.LoadAsync(stream, LoadOptions.None, cancellationToken);
@@ -74,7 +74,7 @@ namespace Soddi.Services
                     name = archive,
                     uris = items
                         .Where(i => StripDashName(i.Name) == archive)
-                        .Select(i => new Archive.UriWithSize(new Uri(baseUrl + i.Name), long.Parse(i.Size))).ToList()
+                        .Select(i => new Archive.UriWithSize(new Uri(BaseUrl + i.Name), long.Parse(i.Size))).ToList()
                 })
                 .Select(archive => new Archive(
                     shortName: archive.name.Replace(".stackexchange.com.7z", ""),

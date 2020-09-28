@@ -25,7 +25,7 @@ namespace Soddi
             HelpText = "Pattern to include (e.g. \"av\" includes all archives containing \"av\").")]
         public string Pattern { get; }
 
-        [Usage(ApplicationAlias = "soddi")]
+        [Usage(ApplicationAlias = "soddi"), UsedImplicitly]
         public static IEnumerable<Example> Examples
         {
             get

@@ -1,4 +1,10 @@
 {
   "omnisharp.enableEditorConfigSupport": true,
-  "omnisharp.enableRoslynAnalyzers": true
+  "omnisharp.enableRoslynAnalyzers": true,
+  "cSpell.words": [
+    "Mediat",
+    "Shouldly",
+    "Soddi",
+    "Xunit"
+  ]
 }

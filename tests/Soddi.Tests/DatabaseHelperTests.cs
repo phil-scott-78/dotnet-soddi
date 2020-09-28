@@ -25,9 +25,9 @@ namespace Soddi.Tests
         public void Can_get_master_and_db_connection(string connString, string expectedMaster, string expectedDb)
         {
             var db = new DatabaseHelper(new MockFileSystem());
-            var c = db.GetMasterAndDbConnectionStrings(connString, "Aviation");
-            c.master.ShouldBe(expectedMaster);
-            c.database.ShouldBe(expectedDb);
+            var (master, database) = db.GetMasterAndDbConnectionStrings(connString, "Aviation");
+            master.ShouldBe(expectedMaster);
+            database.ShouldBe(expectedDb);
         }
 
         [Fact]

@@ -16,7 +16,7 @@ namespace Soddi.Tasks.SqlServer
 
         public void Go(IProgress<(string message, int weight)> progress)
         {
-            string sql = $"select COUNT(*) from sys.databases where name = '{_databaseName}'";
+            var sql = $"select COUNT(*) from sys.databases where name = '{_databaseName}'";
             using var sqlConn = new SqlConnection(_connectionString);
             using var sqlCommand = new SqlCommand(sql, sqlConn);
 

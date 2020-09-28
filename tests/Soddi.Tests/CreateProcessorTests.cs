@@ -19,7 +19,7 @@ namespace Soddi.Tests
         {
             var mockFileSystem = new MockFileSystem(new Dictionary<string, MockFileData>()
             {
-                {"archive.7z", new MockFileData("")}
+                { "archive.7z", new MockFileData("") }
             });
 
             var processorFactory = new ProcessorFactory(mockFileSystem);
@@ -34,7 +34,7 @@ namespace Soddi.Tests
         {
             var mockFileSystem = new MockFileSystem(new Dictionary<string, MockFileData>()
             {
-                {"archive.7z", new MockFileData("")}
+                { "archive.7z", new MockFileData("") }
             });
 
             var processorFactory = new ProcessorFactory(mockFileSystem);
@@ -47,7 +47,7 @@ namespace Soddi.Tests
         {
             var mockFileSystem = new MockFileSystem(new Dictionary<string, MockFileData>()
             {
-                {"archive.zip", new MockFileData("")}
+                { "archive.zip", new MockFileData("") }
             });
 
             var processorFactory = new ProcessorFactory(mockFileSystem);

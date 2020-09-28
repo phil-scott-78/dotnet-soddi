@@ -31,7 +31,7 @@ namespace Soddi
         [Option('o', "output", HelpText = "Output folder")]
         public string Output { get; }
 
-        [Usage(ApplicationAlias = "soddi")]
+        [Usage(ApplicationAlias = "soddi"), UsedImplicitly]
         public static IEnumerable<Example> Examples
         {
             get

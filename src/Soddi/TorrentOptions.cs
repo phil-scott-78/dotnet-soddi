@@ -35,7 +35,7 @@ namespace Soddi
         [Option('f', "portForward", HelpText = "[red]Experimental[/]. Enable port forwarding", Default = false)]
         public bool EnablePortForwarding { get; }
 
-        [Usage(ApplicationAlias = "soddi")]
+        [Usage(ApplicationAlias = "soddi"), UsedImplicitly]
         public static IEnumerable<Example> Examples
         {
             get
@@ -88,12 +88,12 @@ namespace Soddi
             }
 
             Console.WriteLine("Loading torrent...");
-            const string url = "https://archive.org/download/stackexchange/stackexchange_archive.torrent";
+            const string Url = "https://archive.org/download/stackexchange/stackexchange_archive.torrent";
             var httpClient = new HttpClient();
-            var torrentContents = await httpClient.GetByteArrayAsync(url);
+            var torrentContents = await httpClient.GetByteArrayAsync(Url);
 
 
-            EngineSettings settings = new EngineSettings
+            var settings = new EngineSettings
             {
                 AllowedEncryption = EncryptionTypes.All,
                 SavePath = outputPath
@@ -129,7 +129,7 @@ namespace Soddi
                 }
             }
 
-            Torrent torrent = await Torrent.LoadAsync(torrentContents);
+            var torrent = await Torrent.LoadAsync(torrentContents);
             foreach (var torrentFile in torrent.Files)
             {
                 if (torrentFile.Path != archiveUrl.LongName + ".7z" &&
@@ -139,7 +139,7 @@ namespace Soddi
                 }
             }
 
-            TorrentManager manager = new TorrentManager(
+            var manager = new TorrentManager(
                 torrent,
                 outputPath,
                 new TorrentSettings(), string.Empty);

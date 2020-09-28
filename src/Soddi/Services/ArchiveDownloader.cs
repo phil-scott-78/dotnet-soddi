@@ -23,7 +23,7 @@ namespace Soddi.Services
 
         public async Task Go(Uri uri, CancellationToken cancellationToken)
         {
-            string filename = _fileSystem.Path.Combine(_outputPath, _fileSystem.Path.GetFileName(uri.LocalPath));
+            var filename = _fileSystem.Path.Combine(_outputPath, _fileSystem.Path.GetFileName(uri.LocalPath));
 
             var client = new HttpClient();
             using var response =
@@ -34,13 +34,13 @@ namespace Soddi.Services
 
             var allReadsInKb = (int)(response.Content.Headers.ContentLength / 1024 ?? 0);
 
-            const int bufferSize = 81920;
+            const int BufferSize = 81920;
 
-            var buffer = new byte[bufferSize];
+            var buffer = new byte[BufferSize];
             var isMoreToRead = true;
 
             await using var fileStream = _fileSystem.FileStream.Create(filename, FileMode.Create, FileAccess.Write,
-                FileShare.None, bufferSize, true);
+                FileShare.None, BufferSize, true);
 
             do
             {
