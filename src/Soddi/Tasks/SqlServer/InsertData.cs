@@ -39,6 +39,7 @@ namespace Soddi.Tasks.SqlServer
 
             foreach (var (fileName, stream, _) in _processor.GetFiles())
             {
+                // ReSharper disable AccessToDisposedClosure
                 using var blockingStream = new BlockingStream(1024 * 1024 * 1024);
                 var decrypt = Task.Factory.StartNew(() =>
                 {
@@ -64,6 +65,7 @@ namespace Soddi.Tasks.SqlServer
                 });
 
                 Task.WaitAll(decrypt, insert);
+                // ReSharper restore AccessToDisposedClosure
             }
         }
 

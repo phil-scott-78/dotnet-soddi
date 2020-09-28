@@ -34,7 +34,7 @@ namespace Soddi
 
         [Option('f', "portForward", HelpText = "[red]Experimental[/]. Enable port forwarding", Default = false)]
         public bool EnablePortForwarding { get; }
-        
+
         [Usage(ApplicationAlias = "soddi")]
         public static IEnumerable<Example> Examples
         {

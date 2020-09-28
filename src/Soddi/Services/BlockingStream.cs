@@ -2,6 +2,7 @@
 using System.Collections.Concurrent;
 using System.IO;
 using System.Threading;
+using JetBrains.Annotations;
 
 // from https://stackoverflow.com/a/3729877
 
@@ -103,6 +104,7 @@ namespace Soddi.Services
             _blocks.CompleteAdding();
         }
 
+        [AssertionMethod]
         private static void ValidateBufferArgs(byte[] buffer, int offset, int count)
         {
             if (buffer == null)
