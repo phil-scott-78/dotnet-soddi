@@ -21,7 +21,7 @@ namespace Soddi
             Pattern = pattern;
         }
 
-        [Value(0, MetaName = "Pattern", Required = false,
+        [Value(0, MetaName = "Pattern", Required = false, Default = "",
             HelpText = "Pattern to include (e.g. \"av\" includes all archives containing \"av\").")]
         public string Pattern { get; }
 
@@ -42,18 +42,18 @@ namespace Soddi
     {
         public async Task<int> Handle(ListOptions request, CancellationToken cancellationToken)
         {
-            var pattern = request.Pattern;
+            var pattern = request.Pattern ?? "";
             var parser = new AvailableArchiveParser();
             var results = await parser.Get(cancellationToken);
 
-            var table = new Table { Border = Border.Rounded };
+            var table = new Table { Border = TableBorder.Rounded };
             table.AddColumn(new TableColumn("Short Name"));
             table.AddColumn(new TableColumn("Archive"));
 
 
             foreach (var archive in results.Where(i => i.ShortName.Contains(pattern)))
             {
-                var innerTable = new Table { Border = Border.None, ShowHeaders = false, Expand = true };
+                var innerTable = new Table { Border = TableBorder.None, ShowHeaders = false, Expand = true };
 
                 innerTable.AddColumn("Uri");
                 innerTable.AddColumn("Size", column =>

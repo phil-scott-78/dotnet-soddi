@@ -16,14 +16,14 @@ namespace Soddi.Tasks.SqlServer
         // we've read
         private static readonly Dictionary<string, decimal> s_approxSizePerRow = new Dictionary<string, decimal>()
         {
-            {"badges.xml", 112},
-            {"comments.xml", 341},
-            {"posthistory.xml", 982},
-            {"postlinks.xml", 111},
-            {"posts.xml", 1522},
-            {"tags.xml", 78},
-            {"users.xml", 447},
-            {"votes.xml", 90},
+            { "badges.xml", 112 },
+            { "comments.xml", 341 },
+            { "posthistory.xml", 982 },
+            { "postlinks.xml", 111 },
+            { "posts.xml", 1522 },
+            { "tags.xml", 78 },
+            { "users.xml", 447 },
+            { "votes.xml", 90 },
         };
 
         public InsertData(string connectionString, string dbName, IArchivedDataProcessor processor)

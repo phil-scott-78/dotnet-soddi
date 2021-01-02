@@ -224,7 +224,7 @@ namespace Soddi
 
         private static Table BuildTorrentListTable(TorrentManager manager)
         {
-            var torrentListTable = new Table { Border = Border.Rounded };
+            var torrentListTable = new Table { Border = TableBorder.Rounded };
             torrentListTable.AddColumns("Archive File", "Downloaded", "Size", "Percent");
             foreach (var file in manager.Torrent.Files.Where(i => i.Priority != Priority.DoNotDownload))
             {
@@ -240,7 +240,7 @@ namespace Soddi
 
         private static Table BuildTorrentOverviewTable(TorrentManager manager)
         {
-            var torrentTable = new Table { ShowHeaders = false, Border = Border.Rounded };
+            var torrentTable = new Table { ShowHeaders = false, Border = TableBorder.Rounded };
             torrentTable.AddColumns("Desc", "Value");
             torrentTable.AddRow("State", manager.State.ToString());
             torrentTable.AddRow("Name", manager.Torrent == null ? "MetaDataMode" : manager.Torrent.Name);
@@ -257,7 +257,7 @@ namespace Soddi
 
         private static Table BuildTrackerTable(TorrentManager manager)
         {
-            var trackerTable = new Table { Border = Border.Rounded };
+            var trackerTable = new Table { Border = TableBorder.Rounded };
             trackerTable.AddColumns("Tracker", "Last announce");
             foreach (var trackerManagerTier in manager.TrackerManager.Tiers)
             {
@@ -274,7 +274,7 @@ namespace Soddi
 
         private static Table BuildPeerTable(IEnumerable<PeerId> peers)
         {
-            var peerTable = new Table { Border = Border.Rounded };
+            var peerTable = new Table { Border = TableBorder.Rounded };
             peerTable.AddColumns("Peer", "Pieces", "Download Speed", "Upload Speed");
             foreach (var peerId in peers)
             {
@@ -290,7 +290,7 @@ namespace Soddi
 
         private static Table GetEmptyContainerTable(int columns = 1)
         {
-            var t = new Table() { ShowHeaders = false, Border = Border.None };
+            var t = new Table() { ShowHeaders = false, Border = TableBorder.None };
             for (var i = 0; i < columns; i++)
             {
                 t.AddColumn(i.ToString());

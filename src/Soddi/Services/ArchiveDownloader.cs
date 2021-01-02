@@ -34,7 +34,7 @@ namespace Soddi.Services
 
             var allReadsInKb = (int)(response.Content.Headers.ContentLength / 1024 ?? 0);
 
-            const int BufferSize = 81920;
+            const int BufferSize = 1024 * 1024;
 
             var buffer = new byte[BufferSize];
             var isMoreToRead = true;

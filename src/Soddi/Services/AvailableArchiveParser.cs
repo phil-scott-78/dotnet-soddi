@@ -74,7 +74,7 @@ namespace Soddi.Services
                     name = archive,
                     uris = items
                         .Where(i => StripDashName(i.Name) == archive)
-                        .Select(i => new Archive.UriWithSize(new Uri(BaseUrl + i.Name), long.Parse(i.Size))).ToList()
+                        .Select(i => new Archive.UriWithSize(new Uri(BaseUrl + i.Name), long.Parse(i.Size ?? "0"))).ToList()
                 })
                 .Select(archive => new Archive(
                     shortName: archive.name.Replace(".stackexchange.com.7z", ""),
