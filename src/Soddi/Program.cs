@@ -21,7 +21,7 @@ namespace Soddi
             // args = new[] { "import", @"C:\Users\phils\Downloads\aviation.stackexchange.com\", "--dropAndCreate" };
             // args = new[] { "list" };
             // args = new[] {"download", "space"};
-            args = new[] {"torrent", "math"};
+            args = new[] { "torrent", "math" };
             //args = new[] {"import", @"e:\torrent-data\aviation.stackexchange.com.7z", "-d", "aviation"};
             // args = new string[] {"help", "torrent"};
 #endif
@@ -34,7 +34,6 @@ namespace Soddi
                 .Where(t => t.GetInterfaces().Contains(typeof(IRequest<int>)))
                 .ToArray();
 
-
             // parse the command lines and cast the parsed command line argument
             // back into IRequest<int>.
             var parser = new Parser();
@@ -42,37 +41,15 @@ namespace Soddi
 
             if (!(parserResult is Parsed<object> parsed))
             {
-                var regularSentenceBuilder = SentenceBuilder.Create();
-                SentenceBuilder.Factory = () => new MarkedUpSentenceBuilder(regularSentenceBuilder);
-                var s = HelpText.AutoBuild(parserResult, text =>
-                {
-                    var notParsed = (NotParsed<object>)parserResult;
+                // couldn't parse the command line, display help and exit
+                var helpText = HelpText.AutoBuild(
+                    parserResult,
+                    text => GetHelpText(parserResult, text),
+                    AnsiConsole.Width);
 
-                    var helpVerb = notParsed.Errors.OfType<HelpVerbRequestedError>().FirstOrDefault();
-                    var verb = helpVerb?.Type?.GetCustomAttributes().OfType<VerbAttribute>().FirstOrDefault();
-                    if (verb != null && !string.IsNullOrWhiteSpace(verb.HelpText))
-                    {
-                        text.Heading = verb.HelpText;
-                        text.Copyright = string.Empty;
-                    }
-                    else
-                    {
-                        text.Heading = "Download and import Stack Overflow archive data.";
-                        text.Copyright = "";
-                    }
-
-                    text.AdditionalNewLineAfterOption = false;
-                    text.AddNewLineBetweenHelpSections = true;
-
-                    return text;
-                }, AnsiConsole.Width);
-
-
-                AnsiConsole.MarkupLine(s.ToString());
+                AnsiConsole.MarkupLine(helpText.ToString());
                 return 1;
             }
-
-            if (!(parsed.Value is IRequest<int> request)) return 1;
 
             using var container = BuildContainer();
             var mediator = container.GetInstance<IMediator>();
@@ -80,6 +57,7 @@ namespace Soddi
             try
             {
                 // send the request to the appropriate handler
+                var request = (IRequest<int>)parsed.Value;
                 return await mediator.Send(request);
             }
             catch (SoddiException e)
@@ -87,6 +65,32 @@ namespace Soddi
                 Console.WriteLine(e.Message);
                 return 1;
             }
+        }
+
+        private static HelpText GetHelpText(ParserResult<object> parserResult, HelpText text)
+        {
+            var regularSentenceBuilder = SentenceBuilder.Create();
+            SentenceBuilder.Factory = () => new MarkedUpSentenceBuilder(regularSentenceBuilder);
+
+            var notParsed = (NotParsed<object>)parserResult;
+
+            var helpVerb = notParsed.Errors.OfType<HelpVerbRequestedError>().FirstOrDefault();
+            var verb = helpVerb?.Type?.GetCustomAttributes().OfType<VerbAttribute>().FirstOrDefault();
+            if (verb != null && !string.IsNullOrWhiteSpace(verb.HelpText))
+            {
+                text.Heading = verb.HelpText;
+                text.Copyright = string.Empty;
+            }
+            else
+            {
+                text.Heading = "Download and import Stack Overflow archive data.";
+                text.Copyright = "";
+            }
+
+            text.AdditionalNewLineAfterOption = false;
+            text.AddNewLineBetweenHelpSections = true;
+
+            return text;
         }
 
         private static Container BuildContainer()
