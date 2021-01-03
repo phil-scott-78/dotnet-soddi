@@ -18,11 +18,11 @@ namespace Soddi
         public static async Task<int> Main(string[] args)
         {
 #if DEBUG
-            // args = new[] { "import", @"C:\Users\phils\Downloads\aviation.stackexchange.com\", "--dropAndCreate" };
+            //args = new[] { "import", @"C:\Users\phils\Downloads\aviation.stackexchange.com\", "--dropAndCreate" };
             // args = new[] { "list" };
             // args = new[] {"download", "space"};
-            args = new[] { "torrent", "math" };
-            //args = new[] {"import", @"e:\torrent-data\aviation.stackexchange.com.7z", "-d", "aviation"};
+            // args = new[] { "torrent", "math" };
+            args = new[] { "import", @"space.stackexchange.com.7z", "--dropAndCreate", "-d", "space" };
             // args = new string[] {"help", "torrent"};
 #endif
 

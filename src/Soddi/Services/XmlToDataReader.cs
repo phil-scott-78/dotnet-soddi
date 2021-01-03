@@ -74,7 +74,7 @@ namespace Soddi.Services
             {
                 for (var i = 0; i < s_typeMapping.Length; i++)
                 {
-                    if (s_typeMapping[i].Name == name)
+                    if (s_typeMapping[i].Name == n)
                     {
                         return i;
                     }

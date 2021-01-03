@@ -46,7 +46,7 @@ namespace Soddi.Services
                 bc.ColumnMappings.Add(column, column);
             }
 
-            bc.SqlRowsCopied += (sender, args) =>
+            bc.SqlRowsCopied += (_, args) =>
             {
                 _rowsCopied(args.RowsCopied);
             };

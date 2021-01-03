@@ -62,7 +62,7 @@ namespace Soddi.Tests
         [Fact]
         public void Directory_with_7z_files_returns_archive_processor()
         {
-            var files = s_expectedFiles.ToDictionary(s => "archive/" + s + ".7z", s => new MockFileData("test"));
+            var files = s_expectedFiles.ToDictionary(s => "archive/" + s + ".7z", _ => new MockFileData("test"));
             var mockFileSystem = new MockFileSystem(files);
 
             var processorFactory = new ProcessorFactory(mockFileSystem);
@@ -75,7 +75,7 @@ namespace Soddi.Tests
         [Fact]
         public void Directory_with_xml_files_returns_folder_processor()
         {
-            var files = s_expectedFiles.ToDictionary(s => "archive/" + s + ".xml", s => new MockFileData("test"));
+            var files = s_expectedFiles.ToDictionary(s => "archive/" + s + ".xml", _ => new MockFileData("test"));
             var mockFileSystem = new MockFileSystem(files);
 
             var processorFactory = new ProcessorFactory(mockFileSystem);
@@ -103,8 +103,8 @@ namespace Soddi.Tests
         [Fact]
         public void Directory_with_both_xml_and_7z_files_returns_archive_processor()
         {
-            var sevenFiles = s_expectedFiles.ToDictionary(s => "archive/" + s + ".7z", s => new MockFileData("test"));
-            var xmlFiles = s_expectedFiles.ToDictionary(s => "archive/" + s + ".xml", s => new MockFileData("test"));
+            var sevenFiles = s_expectedFiles.ToDictionary(s => "archive/" + s + ".7z", _ => new MockFileData("test"));
+            var xmlFiles = s_expectedFiles.ToDictionary(s => "archive/" + s + ".xml", _ => new MockFileData("test"));
 
             var files = sevenFiles.Concat(xmlFiles).ToDictionary(i => i.Key, i => i.Value);
 

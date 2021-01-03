@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandLine;
@@ -10,6 +9,7 @@ using MediatR;
 using Soddi.Services;
 using Soddi.Tasks;
 using Soddi.Tasks.SqlServer;
+using Spectre.Console;
 
 namespace Soddi
 {
@@ -58,7 +58,8 @@ namespace Soddi
                 yield return new Example("Import data using defaults",
                     new ImportOptions("math.stackexchange.com.7z", "", "", false, false));
                 yield return new Example("Import data using a connection string and database name",
-                    new ImportOptions("math.stackexchange.com.7z", "math", "Server=(local)\\Sql2017;User Id=admin;password=t3ddy", false, false));
+                    new ImportOptions("math.stackexchange.com.7z", "math",
+                        "Server=(local)\\Sql2017;User Id=admin;password=t3ddy", false, false));
                 yield return new Example("Import data using defaults and create database",
                     new ImportOptions("math.stackexchange.com.7z", "", "", true, false));
                 yield return new Example("Import data using defaults without constraints",
@@ -66,6 +67,7 @@ namespace Soddi
             }
         }
     }
+
 
     public class ImportHandler : IRequestHandler<ImportOptions, int>
     {
@@ -105,22 +107,35 @@ namespace Soddi
             tasks.Enqueue(("Insert type values", new InsertTypeValues(databaseConnectionString)));
             tasks.Enqueue(("Insert data from archive", new InsertData(databaseConnectionString, dbName, processor)));
 
-            var maxTicks = tasks.Sum(i => i.task.GetTaskWeight());
-            var progressBar = new FudgedProgressBar(maxTicks, "Running", ConsoleColor.Blue);
-
-            foreach (var (_, task) in tasks)
-            {
-                var progress = new Progress<(string message, int weight)>(i =>
+            var progressBar = AnsiConsole.Progress()
+                .AutoClear(false)
+                .Columns(new ProgressColumn[]
                 {
-                    var (message, weight) = i;
-                    progressBar.Tick(weight, message);
+                    new FixedTaskDescriptionColumn(40), // Task description
+                    new ProgressBarColumn(), // Progress bar
+                    new PercentageColumn(), // Percentage
+                    new RemainingTimeColumn(), // Remaining time
+                    new SpinnerColumn(), // Spinner
                 });
 
-                task.Go(progress);
-                progressBar.AddTaskWeight(task.GetTaskWeight());
-            }
+            progressBar.Start(ctx =>
+            {
+                foreach (var (description, task) in tasks)
+                {
+                    var progressBarTask = ctx.AddTask(description);
+                    progressBarTask.MaxValue(task.GetTaskWeight());
+                    var progress = new Progress<(string message, int weight)>(i =>
+                    {
+                        var (message, weight) = i;
+                        progressBarTask.Increment(weight);
+                        progressBarTask.Description(message);
+                    });
 
-            progressBar.WrapUp("Done");
+                    task.Go(progress);
+                    progressBarTask.Increment(progressBarTask.MaxValue - progressBarTask.Value);
+                }
+            });
+
             return Task.FromResult(0);
         }
     }

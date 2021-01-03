@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO.Abstractions;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
@@ -23,13 +24,22 @@ namespace Soddi.Services
 
         public class UriWithSize
         {
+            private readonly IFileSystem _fileSystem;
+
             public Uri Uri { get; }
             public long SizeInBytes { get; }
 
-            public UriWithSize(Uri uri, long sizeInBytes)
+            public string Description()
+            {
+                var fileName = _fileSystem.Path.GetFileName(Uri.AbsolutePath);
+                return $"{fileName} ({SizeInBytes.BytesToString()})";
+            }
+
+            public UriWithSize(Uri uri, long sizeInBytes, IFileSystem? fileSystem = null)
             {
                 Uri = uri;
                 SizeInBytes = sizeInBytes;
+                _fileSystem = fileSystem ?? new FileSystem();
             }
         }
     }
@@ -74,7 +84,8 @@ namespace Soddi.Services
                     name = archive,
                     uris = items
                         .Where(i => StripDashName(i.Name) == archive)
-                        .Select(i => new Archive.UriWithSize(new Uri(BaseUrl + i.Name), long.Parse(i.Size ?? "0"))).ToList()
+                        .Select(i => new Archive.UriWithSize(new Uri(BaseUrl + i.Name), long.Parse(i.Size ?? "0")))
+                        .ToList()
                 })
                 .Select(archive => new Archive(
                     shortName: archive.name.Replace(".stackexchange.com.7z", ""),

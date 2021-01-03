@@ -8,10 +8,8 @@ using CommandLine;
 using CommandLine.Text;
 using JetBrains.Annotations;
 using MediatR;
-using ShellProgressBar;
 using Soddi.Services;
-
-// ReSharper disable AccessToDisposedClosure
+using Spectre.Console;
 
 namespace Soddi
 {
@@ -78,39 +76,38 @@ namespace Soddi
                 throw new SoddiException($"Could not find archive named {request.Archive}");
             }
 
-            using var masterProgress = new ProgressBar(
-                (int)(archiveUrl.Uris.Sum(i => i.SizeInBytes) / 1024),
-                $"Downloading {request.Archive}",
-                ConsoleColor.Blue);
-
-            var allDownloaded = 0;
-            var tasks = new List<Task>();
-            Parallel.ForEach(archiveUrl.Uris, uri =>
-            {
-                var child = masterProgress.Spawn((int)(uri.SizeInBytes / 1024), uri.Uri.AbsolutePath,
-                    new ProgressBarOptions() { CollapseWhenFinished = true });
-
-                var childDownloaded = 0;
-                var progress = new Progress<(int downloadedInKb, int totalSizeInKb)>(i =>
+            await AnsiConsole.Progress()
+                .AutoClear(false)
+                .Columns(new ProgressColumn[]
                 {
-                    var (downloaded, totalSize) = i;
+                    new FixedTaskDescriptionColumn(40), // Task description
+                    new ProgressBarColumn(), // Progress bar
+                    new PercentageColumn(), // Percentage
+                    new RemainingTimeColumn(), // Remaining time
+                    new SpinnerColumn(), // Spinner
+                }).StartAsync(async ctx =>
+                {
+                    List<(ProgressTask Task, Archive.UriWithSize UriWithSize)> tasks = archiveUrl.Uris
+                        .Select(uriWithSize => (ctx.AddTask(uriWithSize.Description()), uriWithSize))
+                        .ToList();
 
-                    childDownloaded += downloaded;
-                    Interlocked.Add(ref allDownloaded, downloaded);
+                    while (!ctx.IsFinished)
+                    {
+                        // Increment progress
+                        foreach (var (task, uriWithSize) in tasks)
+                        {
+                            var progress = new Progress<(int downloadedInKb, int totalSizeInKb)>(i =>
+                            {
+                                task.Increment(i.downloadedInKb);
+                                task.MaxValue(i.totalSizeInKb);
+                            });
 
-                    child.Tick(childDownloaded,
-                        $"Downloading {archiveUrl.ShortName} ({childDownloaded.KiloBytesToString()} of {totalSize.KiloBytesToString()})");
-                    masterProgress.Tick(allDownloaded);
+                            var downloader = new ArchiveDownloader(outputPath, progress);
+                            await downloader.Go(uriWithSize.Uri, cancellationToken);
+                        }
+                    }
                 });
 
-                var downloader = new ArchiveDownloader(outputPath, progress);
-                var task = downloader.Go(uri.Uri, cancellationToken);
-
-                tasks.Add(task);
-            });
-
-            Task.WaitAll(tasks.ToArray());
-            masterProgress.Tick(masterProgress.MaxTicks, "Done");
             return await Task.FromResult(0);
         }
     }

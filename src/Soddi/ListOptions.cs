@@ -42,7 +42,7 @@ namespace Soddi
     {
         public async Task<int> Handle(ListOptions request, CancellationToken cancellationToken)
         {
-            var pattern = request.Pattern ?? "";
+            var pattern = request.Pattern;
             var parser = new AvailableArchiveParser();
             var results = await parser.Get(cancellationToken);
 
