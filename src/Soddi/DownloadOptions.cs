@@ -80,11 +80,8 @@ namespace Soddi
                 .AutoClear(false)
                 .Columns(new ProgressColumn[]
                 {
-                    new SpinnerColumn(),
-                    new FixedTaskDescriptionColumn(Math.Clamp(AnsiConsole.Width, 40, 65)),
-                    new ProgressBarColumn(),
-                    new PercentageColumn(),
-                    new RemainingTimeColumn(),
+                    new SpinnerColumn(), new FixedTaskDescriptionColumn(Math.Clamp(AnsiConsole.Width, 40, 65)),
+                    new ProgressBarColumn(), new PercentageColumn(), new RemainingTimeColumn(),
                 }).StartAsync(async ctx =>
                 {
                     List<(ProgressTask Task, Archive.UriWithSize UriWithSize)> tasks = archiveUrl.Uris
@@ -96,16 +93,18 @@ namespace Soddi
                         foreach (var (task, uriWithSize) in tasks)
                         {
                             var progress = new Progress<(int downloadedInKb, int totalSizeInKb)>(i =>
-                            {
-                                long downloadedInBytes = i.downloadedInKb * 1024;
-                                long totalSizeInBytes = i.totalSizeInKb * 1024;
+                                {
+                                    var progressTask = task;
+                                    var (downloadedInKb, totalSizeInKb) = i;
 
-                                task.Increment(i.downloadedInKb);
-                                task.MaxValue(i.totalSizeInKb);
-                                task.Description(
-                                    $"{uriWithSize.Description()} - {downloadedInBytes.BytesToString()}/{totalSizeInBytes.BytesToString()}"
-                                );
-                            });
+                                    progressTask.Increment(downloadedInKb);
+                                    progressTask.MaxValue(totalSizeInKb);
+
+                                    var description =
+                                        $"{uriWithSize.Description(false)} - {progressTask.Value.KiloBytesToString()}/{progressTask.MaxValue.KiloBytesToString()}";
+                                    progressTask.Description(description);
+                                }
+                            );
 
                             var downloader = new ArchiveDownloader(outputPath, progress);
                             await downloader.Go(uriWithSize.Uri, cancellationToken);

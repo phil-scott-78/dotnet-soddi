@@ -83,6 +83,11 @@ namespace Soddi
             return BytesToString(kiloByteCount * 1024L);
         }
 
+        public static string KiloBytesToString(this double kbCount)
+        {
+            return ((long)kbCount * 1024).BytesToString();
+        }
+
         public static string BytesToString(this long byteCount)
         {
             // from https://stackoverflow.com/a/4975942

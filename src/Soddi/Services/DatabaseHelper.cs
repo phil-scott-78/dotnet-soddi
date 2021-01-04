@@ -67,7 +67,9 @@ namespace Soddi.Services
                 return _fileSystem.Path.GetFileNameWithoutExtension(path);
             }
 
-            throw new SoddiException($"Database archive path not found - {path}");
+            // we should have already verified the path is good at this point
+            // so this isn't an application exception
+            throw new FileNotFoundException("Database archive path not found", path);
         }
     }
 }

@@ -29,10 +29,10 @@ namespace Soddi.Services
             public Uri Uri { get; }
             public long SizeInBytes { get; }
 
-            public string Description()
+            public string Description(bool includeFileSize = true)
             {
                 var fileName = _fileSystem.Path.GetFileName(Uri.AbsolutePath);
-                return $"{fileName} ({SizeInBytes.BytesToString()})";
+                return includeFileSize ? $"{fileName} ({SizeInBytes.BytesToString()})" : fileName;
             }
 
             public UriWithSize(Uri uri, long sizeInBytes, IFileSystem? fileSystem = null)

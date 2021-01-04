@@ -45,12 +45,15 @@ namespace Soddi.Services
             do
             {
                 var read = await contentStream
-                    .ReadAsync(buffer, 0, buffer.Length, cancellationToken)
+                    .ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)
                     .ConfigureAwait(false);
 
                 if (read != 0)
                 {
-                    await fileStream.WriteAsync(buffer, 0, read, cancellationToken).ConfigureAwait(false);
+                    await fileStream
+                        .WriteAsync(buffer.AsMemory(0, read), cancellationToken)
+                        .ConfigureAwait(false);
+
                     _progress.Report((read / 1024, allReadsInKb));
                 }
                 else

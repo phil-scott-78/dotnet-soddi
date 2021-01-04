@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO.Abstractions;
+using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandLine;
@@ -72,25 +73,48 @@ namespace Soddi
 
     public class ImportHandler : IRequestHandler<ImportOptions, int>
     {
+        private readonly AvailableArchiveParser _availableArchiveParser;
         private readonly DatabaseHelper _databaseHelper;
         private readonly ProcessorFactory _processorFactory;
         private readonly IFileSystem _fileSystem;
 
-        public ImportHandler(DatabaseHelper databaseHelper, ProcessorFactory processorFactory, IFileSystem fileSystem)
+        public ImportHandler(DatabaseHelper databaseHelper, ProcessorFactory processorFactory, IFileSystem fileSystem, AvailableArchiveParser availableArchiveParser)
         {
             _databaseHelper = databaseHelper;
             _processorFactory = processorFactory;
             _fileSystem = fileSystem;
+            _availableArchiveParser = availableArchiveParser;
         }
 
-        public Task<int> Handle(ImportOptions request, CancellationToken cancellationToken)
+        private async Task<string> CheckAndFixupPath(string path, CancellationToken token)
         {
-            var dbName = _databaseHelper.GetDbNameFromPathOption(request.DatabaseName, request.Path);
+            if (_fileSystem.File.Exists(path) || _fileSystem.Directory.Exists(path))
+            {
+                return path;
+            }
+
+            var archives = await _availableArchiveParser.Get(token);
+            var foundByShortName =
+                archives.FirstOrDefault(i => i.ShortName.Equals(path, StringComparison.InvariantCultureIgnoreCase));
+
+            if (foundByShortName != null)
+            {
+                var potentialLongFileName = foundByShortName.LongName + ".7z";
+                if (_fileSystem.File.Exists(potentialLongFileName)) return potentialLongFileName;
+            }
+
+            throw new SoddiException("Could not find archive " + path);
+        }
+
+        public async Task<int> Handle(ImportOptions request, CancellationToken cancellationToken)
+        {
+            var requestPath = await CheckAndFixupPath(request.Path, cancellationToken);
+            var dbName = _databaseHelper.GetDbNameFromPathOption(request.DatabaseName, requestPath);
             var tasks = new Queue<(string name, ITask task)>();
             var (masterConnectionString, databaseConnectionString) =
                 _databaseHelper.GetMasterAndDbConnectionStrings(request.ConnectionString, dbName);
 
-            var processor = _processorFactory.VerifyAndCreateProcessor(request.Path);
+            var processor = _processorFactory.VerifyAndCreateProcessor(requestPath);
 
             if (request.DropAndRecreate)
             {
@@ -114,11 +138,11 @@ namespace Soddi
                 .AutoClear(false)
                 .Columns(new ProgressColumn[]
                 {
-                    new FixedTaskDescriptionColumn(40), // Task description
-                    new ProgressBarColumn(), // Progress bar
-                    new PercentageColumn(), // Percentage
-                    new RemainingTimeColumn(), // Remaining time
-                    new SpinnerColumn(), // Spinner
+                    new SpinnerColumn(),
+                    new FixedTaskDescriptionColumn(40),
+                    new ProgressBarColumn(),
+                    new PercentageColumn(),
+                    new RemainingTimeColumn(),
                 });
 
             progressBar.Start(ctx =>
@@ -139,7 +163,7 @@ namespace Soddi
                 }
             });
 
-            return Task.FromResult(0);
+            return 0;
         }
     }
 }
