@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO.Abstractions;
 using System.Linq;
+using System.Net.Http.Headers;
 using System.Reflection;
 using System.Threading.Tasks;
 using CommandLine;
@@ -17,12 +18,14 @@ namespace Soddi
     {
         public static async Task<int> Main(string[] args)
         {
+            Console.OutputEncoding = System.Text.Encoding.UTF8;
+
 #if DEBUG
             //args = new[] { "import", @"C:\Users\phils\Downloads\aviation.stackexchange.com\", "--dropAndCreate" };
             // args = new[] { "list" };
             // args = new[] {"download", "space"};
-            // args = new[] { "torrent", "math" };
-            args = new[] { "import", @"space.stackexchange.com.7z", "--dropAndCreate", "-d", "space" };
+            args = new[] { "torrent", "math" };
+            // args = new[] { "import", @"space.stackexchange.com.7z", "--dropAndCreate", "-d", "space" };
             // args = new string[] {"help", "torrent"};
 #endif
 
@@ -63,6 +66,11 @@ namespace Soddi
             catch (SoddiException e)
             {
                 Console.WriteLine(e.Message);
+                return 1;
+            }
+            catch (Exception e)
+            {
+                AnsiConsole.WriteException(e);
                 return 1;
             }
         }

@@ -80,11 +80,11 @@ namespace Soddi
                 .AutoClear(false)
                 .Columns(new ProgressColumn[]
                 {
-                    new FixedTaskDescriptionColumn(40), // Task description
-                    new ProgressBarColumn(), // Progress bar
-                    new PercentageColumn(), // Percentage
-                    new RemainingTimeColumn(), // Remaining time
-                    new SpinnerColumn(), // Spinner
+                    new SpinnerColumn(),
+                    new FixedTaskDescriptionColumn(Math.Clamp(AnsiConsole.Width, 40, 65)),
+                    new ProgressBarColumn(),
+                    new PercentageColumn(),
+                    new RemainingTimeColumn(),
                 }).StartAsync(async ctx =>
                 {
                     List<(ProgressTask Task, Archive.UriWithSize UriWithSize)> tasks = archiveUrl.Uris
@@ -93,13 +93,18 @@ namespace Soddi
 
                     while (!ctx.IsFinished)
                     {
-                        // Increment progress
                         foreach (var (task, uriWithSize) in tasks)
                         {
                             var progress = new Progress<(int downloadedInKb, int totalSizeInKb)>(i =>
                             {
+                                long downloadedInBytes = i.downloadedInKb * 1024;
+                                long totalSizeInBytes = i.totalSizeInKb * 1024;
+
                                 task.Increment(i.downloadedInKb);
                                 task.MaxValue(i.totalSizeInKb);
+                                task.Description(
+                                    $"{uriWithSize.Description()} - {downloadedInBytes.BytesToString()}/{totalSizeInBytes.BytesToString()}"
+                                );
                             });
 
                             var downloader = new ArchiveDownloader(outputPath, progress);

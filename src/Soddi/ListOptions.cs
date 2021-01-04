@@ -50,7 +50,6 @@ namespace Soddi
             table.AddColumn(new TableColumn("Short Name"));
             table.AddColumn(new TableColumn("Archive"));
 
-
             foreach (var archive in results.Where(i => i.ShortName.Contains(pattern)))
             {
                 var innerTable = new Table { Border = TableBorder.None, ShowHeaders = false, Expand = true };

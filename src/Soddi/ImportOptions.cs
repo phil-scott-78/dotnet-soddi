@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.IO.Abstractions;
 using System.Threading;
 using System.Threading.Tasks;
 using CommandLine;
@@ -73,11 +74,13 @@ namespace Soddi
     {
         private readonly DatabaseHelper _databaseHelper;
         private readonly ProcessorFactory _processorFactory;
+        private readonly IFileSystem _fileSystem;
 
-        public ImportHandler(DatabaseHelper databaseHelper, ProcessorFactory processorFactory)
+        public ImportHandler(DatabaseHelper databaseHelper, ProcessorFactory processorFactory, IFileSystem fileSystem)
         {
             _databaseHelper = databaseHelper;
             _processorFactory = processorFactory;
+            _fileSystem = fileSystem;
         }
 
         public Task<int> Handle(ImportOptions request, CancellationToken cancellationToken)
