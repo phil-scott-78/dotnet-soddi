@@ -54,7 +54,7 @@ namespace Soddi.Services
             var client = new HttpClient();
             using var response = client
                 .GetAsync(DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).Result;
-            var stream = await response.Content.ReadAsStreamAsync();
+            var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
             var doc = await XDocument.LoadAsync(stream, LoadOptions.None, cancellationToken);
             if (doc.Root?.Document == null)

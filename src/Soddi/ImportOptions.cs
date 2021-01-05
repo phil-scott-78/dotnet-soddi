@@ -19,13 +19,14 @@ namespace Soddi
     public class ImportOptions : IRequest<int>
     {
         public ImportOptions(string path, string databaseName, string connectionString, bool dropAndRecreate,
-            bool skipPrimaryKeys)
+            bool skipPrimaryKeys, bool skipTags)
         {
             Path = path;
             DatabaseName = databaseName;
             ConnectionString = connectionString;
             DropAndRecreate = dropAndRecreate;
             SkipPrimaryKeys = skipPrimaryKeys;
+            SkipTags = skipTags;
         }
 
         [Value(0, Required = true, MetaName = "Path",
@@ -52,20 +53,23 @@ namespace Soddi
         [Option("skipConstraints", HelpText = "Skip adding primary keys and unique constraints.", Default = false)]
         public bool SkipPrimaryKeys { get; }
 
+        [Option("skipTags", HelpText = "Skip adding PostTags table.", Default = false)]
+        public bool SkipTags { get; }
+
         [Usage(ApplicationAlias = "soddi"), UsedImplicitly]
         public static IEnumerable<Example> Examples
         {
             get
             {
                 yield return new Example("Import data using defaults",
-                    new ImportOptions("math.stackexchange.com.7z", "", "", false, false));
+                    new ImportOptions("math.stackexchange.com.7z", "", "", false, false, false));
                 yield return new Example("Import data using a connection string and database name",
                     new ImportOptions("math.stackexchange.com.7z", "math",
-                        "Server=(local)\\Sql2017;User Id=admin;password=t3ddy", false, false));
+                        "Server=(local)\\Sql2017;User Id=admin;password=t3ddy", false, false, false));
                 yield return new Example("Import data using defaults and create database",
-                    new ImportOptions("math.stackexchange.com.7z", "", "", true, false));
+                    new ImportOptions("math.stackexchange.com.7z", "", "", true, false, false));
                 yield return new Example("Import data using defaults without constraints",
-                    new ImportOptions("math.stackexchange.com.7z", "", "", false, true));
+                    new ImportOptions("math.stackexchange.com.7z", "", "", false, true, false));
             }
         }
     }
@@ -125,14 +129,14 @@ namespace Soddi
                 tasks.Enqueue(("Verify database exists", new VerifyDatabaseExists(masterConnectionString, dbName)));
             }
 
-            tasks.Enqueue(("Create schema", new CreateSchema(databaseConnectionString)));
+            tasks.Enqueue(("Create schema", new CreateSchema(databaseConnectionString, !request.SkipTags)));
             if (!request.SkipPrimaryKeys)
             {
                 tasks.Enqueue(("Add constraints", new AddConstraints(databaseConnectionString)));
             }
 
             tasks.Enqueue(("Insert type values", new InsertTypeValues(databaseConnectionString)));
-            tasks.Enqueue(("Insert data from archive", new InsertData(databaseConnectionString, dbName, processor)));
+            tasks.Enqueue(("Insert data from archive", new InsertData(databaseConnectionString, dbName, processor, !request.SkipTags)));
 
             var progressBar = AnsiConsole.Progress()
                 .AutoClear(false)

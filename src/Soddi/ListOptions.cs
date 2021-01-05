@@ -16,14 +16,21 @@ namespace Soddi
     [Verb("list", HelpText = "List available Stack Overflow data dumps."), UsedImplicitly]
     public class ListOptions : IRequest<int>
     {
-        public ListOptions(string pattern = "")
+        public ListOptions(string pattern, bool includeMeta)
         {
             Pattern = pattern;
+            IncludeMeta = includeMeta;
         }
 
         [Value(0, MetaName = "Pattern", Required = false, Default = "",
             HelpText = "Pattern to include (e.g. \"av\" includes all archives containing \"av\").")]
         public string Pattern { get; }
+
+        [Option("includeMeta",
+            HelpText = "Include meta databases.",
+            Required = false,
+            Default = false)]
+        public bool IncludeMeta { get; }
 
         [Usage(ApplicationAlias = "soddi"), UsedImplicitly]
         public static IEnumerable<Example> Examples
@@ -31,9 +38,11 @@ namespace Soddi
             get
             {
                 yield return new Example("List all archives",
-                    new ListOptions());
+                    new ListOptions("", false));
                 yield return new Example("List all archives containing the letters \"av\"",
-                    new ListOptions("av"));
+                    new ListOptions("av", false));
+                yield return new Example("List all archives containing the letters \"av\" including meta sites",
+                    new ListOptions("av", true));
             }
         }
     }
@@ -50,7 +59,13 @@ namespace Soddi
             table.AddColumn(new TableColumn("Short Name"));
             table.AddColumn(new TableColumn("Archive"));
 
-            foreach (var archive in results.Where(i => i.ShortName.Contains(pattern)))
+            var filteredResults = results.Where(i => i.ShortName.Contains(pattern));
+            if (request.IncludeMeta == false)
+            {
+                filteredResults = filteredResults.Where(i => !i.LongName.Contains(".meta."));
+            }
+
+            foreach (var archive in filteredResults)
             {
                 var innerTable = new Table { Border = TableBorder.None, ShowHeaders = false, Expand = true };
 

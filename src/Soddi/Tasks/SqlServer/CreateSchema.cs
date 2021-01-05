@@ -7,10 +7,12 @@ namespace Soddi.Tasks.SqlServer
     public class CreateSchema : ITask
     {
         private readonly string _connectionString;
+        private readonly bool _includePostTags;
 
-        public CreateSchema(string connectionString)
+        public CreateSchema(string connectionString, bool includePostTags)
         {
             _connectionString = connectionString;
+            _includePostTags = includePostTags;
         }
 
         public void Go(IProgress<(string message, int weight)> progress)
@@ -61,7 +63,11 @@ namespace Soddi.Tasks.SqlServer
             return 10000;
         }
 
-        private const string Sql = @"
+        private string Sql
+        {
+            get
+            {
+                var s = @"
 CREATE TABLE [dbo].[Badges](
 	[Id] [int] IDENTITY(1,1) NOT NULL,
 	[Name] [nvarchar](40) NOT NULL,
@@ -200,5 +206,22 @@ CREATE TABLE [dbo].[VoteTypes](
 ) ON [PRIMARY]
 GO
 ";
+
+                if (_includePostTags)
+                {
+                    s += @"
+/****** Object:  Table [dbo].[PostTags]    Script Date: 9/15/2020 7:48:12 PM ******/
+
+CREATE TABLE [dbo].[PostTags] (
+  [PostId] [INT] /* IDENTITY */    NOT NULL,
+  [Tag]    [NVARCHAR](50)    NOT NULL
+  , CONSTRAINT [PK_PostTags__PostId_Tag] PRIMARY KEY CLUSTERED ( [PostId] ASC,[Tag] ASC ) ON [PRIMARY]
+  ) ON [PRIMARY]
+";
+                }
+
+                return s;
+            }
+        }
     }
 }

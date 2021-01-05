@@ -10,19 +10,35 @@ namespace Soddi.Services
     public class XmlToDataReader<TClass> : IDataReader
     {
         private readonly XmlReader _xmlReader;
+        private readonly Action<(int postId, string tags)>? _onTagFound;
+        private readonly Lazy<bool> _isPost;
+        private readonly Lazy<(int PostIdOrdinal, int TagOrdinal)> _postTagColumnOrdinals;
 
-        // ReSharper disable StaticMemberInGenericType
-        private static readonly PropertyInfo[] s_typeMapping = typeof(TClass).GetProperties();
-
-        private static readonly ConcurrentDictionary<string, int> s_ordinalMapping =
-            new ConcurrentDictionary<string, int>();
-        // ReSharper restore StaticMemberInGenericType
+        private readonly PropertyInfo[] _typeMapping = typeof(TClass).GetProperties();
+        private readonly ConcurrentDictionary<string, int> _ordinalMapping = new();
 
         private XElement? _element;
 
-        public XmlToDataReader(XmlReader xmlReader)
+        public XmlToDataReader(XmlReader xmlReader, Action<(int postId, string tags)>? onTagFound = null)
         {
+            _isPost = new Lazy<bool>(() =>
+            {
+                try
+                {
+                    GetOrdinal("Tags");
+                    return true;
+                }
+                catch
+                {
+                    return false;
+                }
+            });
+
+            _postTagColumnOrdinals =
+                new Lazy<(int PostIdOrdinal, int TagOrdinal)>(() => (GetOrdinal("Id"), GetOrdinal("Tags")));
+
             _xmlReader = xmlReader;
+            _onTagFound = onTagFound;
             _xmlReader.MoveToContent();
         }
 
@@ -45,36 +61,34 @@ namespace Soddi.Services
         public float GetFloat(int i) => throw new NotImplementedException();
         public Guid GetGuid(int i) => throw new NotImplementedException();
         public short GetInt16(int i) => throw new NotImplementedException();
-        public int GetInt32(int i) => throw new NotImplementedException();
         public long GetInt64(int i) => throw new NotImplementedException();
-        public string GetName(int i) => throw new NotImplementedException();
-
-
-        public string GetString(int i) => throw new NotImplementedException();
         public int GetValues(object[] values) => throw new NotImplementedException();
         public object this[int i] => throw new NotImplementedException();
         public object this[string name] => throw new NotImplementedException();
         public DataTable GetSchemaTable() => throw new NotImplementedException();
         public bool NextResult() => false;
 
-        // these are the things needed by SqlBulkCopy
-        public string GetDataTypeName(int i)
-        {
-            return s_typeMapping[i].Name;
-        }
 
-        public bool IsDBNull(int i)
-        {
-            return _element?.Attribute(s_typeMapping[i].Name) == null;
-        }
+        // these are the things needed by SqlBulkCopy
+        public string GetString(int i) => (string)GetValue(i);
+        public int GetInt32(int i) => (int.Parse((string)GetValue(i)));
+        public string GetName(int i) => _typeMapping[i].Name;
+        public string GetDataTypeName(int i) => _typeMapping[i].PropertyType.Name;
+        public bool IsDBNull(int i) => _element?.Attribute(_typeMapping[i].Name) == null;
+        public Type GetFieldType(int i) => _typeMapping[i].PropertyType;
+
+        public object GetValue(int i) => _element?.Attribute(_typeMapping[i].Name)?.Value ??
+                                         throw new Exception("No element to read");
+
+        public int FieldCount => _typeMapping.Length;
 
         public int GetOrdinal(string name)
         {
-            return s_ordinalMapping.GetOrAdd(name, n =>
+            return _ordinalMapping.GetOrAdd(name, n =>
             {
-                for (var i = 0; i < s_typeMapping.Length; i++)
+                for (var i = 0; i < _typeMapping.Length; i++)
                 {
-                    if (s_typeMapping[i].Name == n)
+                    if (_typeMapping[i].Name == n)
                     {
                         return i;
                     }
@@ -83,18 +97,6 @@ namespace Soddi.Services
                 throw new Exception("Invalid column name");
             });
         }
-
-        public Type GetFieldType(int i)
-        {
-            return s_typeMapping[i].PropertyType;
-        }
-
-        public object GetValue(int i)
-        {
-            return _element?.Attribute(s_typeMapping[i].Name)?.Value ?? throw new Exception("No element to read");
-        }
-
-        public int FieldCount => s_typeMapping.Length;
 
         public bool Read()
         {
@@ -115,8 +117,23 @@ namespace Soddi.Services
 
             _element = el;
 
+            if (_onTagFound != null && IsPost())
+            {
+                try
+                {
+                    var (idOrdinal, tagOrdinal) = _postTagColumnOrdinals.Value;
+                    _onTagFound.Invoke((GetInt32(idOrdinal), GetString(tagOrdinal)));
+                }
+                catch (Exception)
+                {
+                    /* swallow */
+                }
+            }
+
             return true;
         }
+
+        private bool IsPost() => _isPost.Value;
 
         public int Depth => 0;
         public bool IsClosed => false;

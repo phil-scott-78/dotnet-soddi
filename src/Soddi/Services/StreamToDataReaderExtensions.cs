@@ -21,11 +21,11 @@ namespace Soddi.Services
                 i => typeof(XmlToDataReader<>).MakeGenericType(i.Type)
             );
 
-        public static IDataReader AsDataReader(this Stream entryStream, string filename)
+        public static IDataReader AsDataReader(this Stream entryStream, string filename, Action<(int postId, string tags)>? onTagFound = null)
         {
             var xmlReader = XmlReader.Create(entryStream);
             var type = s_stringToXmlReaderType[filename] ?? throw new Exception("Unknown archive file - " + filename);
-            if (Activator.CreateInstance(type, xmlReader) is IDataReader instance)
+            if (Activator.CreateInstance(type, xmlReader, onTagFound) is IDataReader instance)
             {
                 return instance;
             }

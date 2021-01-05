@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Data;
 using System.Threading.Tasks;
 using Soddi.Services;
 
@@ -10,6 +11,7 @@ namespace Soddi.Tasks.SqlServer
         private readonly string _connectionString;
         private readonly string _dbName;
         private readonly IArchivedDataProcessor _processor;
+        private readonly bool _includePostTags;
 
         // file size and rows from the aviation database to guess our way
         // to about how far we are through a file based on it's size and number of rows
@@ -26,11 +28,13 @@ namespace Soddi.Tasks.SqlServer
             { "votes.xml", 90 },
         };
 
-        public InsertData(string connectionString, string dbName, IArchivedDataProcessor processor)
+        public InsertData(string connectionString, string dbName, IArchivedDataProcessor processor,
+            bool includePostTags)
         {
             _connectionString = connectionString;
             _dbName = dbName;
             _processor = processor;
+            _includePostTags = includePostTags;
         }
 
         public void Go(IProgress<(string message, int weight)> progress)
@@ -59,12 +63,41 @@ namespace Soddi.Tasks.SqlServer
                         progress.Report(($"{fileName} ({l} rows read)", (int)min));
                     });
 
-                    // someone smarter than me might be able to figure out how to decrypt on one thread
-                    // and bulk insert on another.
-                    inserter.Insert(blockingStream.AsDataReader(fileName), fileName);
+                    var isPostFile = fileName.Equals("posts.xml", StringComparison.InvariantCultureIgnoreCase);
+                    Task? postTagTask = null;
+                    PubSubPostTagDataReader? postTagDataReader = null;
+
+                    if (isPostFile && _includePostTags)
+                    {
+                        // if we are reading a posts.xml file and we need to generate the tags we'll launch a third
+                        // thread to bulk insert the tags as we find them. it'll use the PubSubPostTagDataReader
+                        // as the source of the data, and then in the thread that is reading posts.xml when it finds
+                        // a new row with tags it'll call an action (defined below) that adds that tag to the DataReader
+                        postTagDataReader = new PubSubPostTagDataReader();
+                        postTagTask = Task.Factory.StartNew(() =>
+                        {
+                            var postTagInserter = new SqlServerBulkInserter(_connectionString, _dbName, _ => { });
+                            postTagInserter.Insert(postTagDataReader, "PostTags.xml");
+                        });
+                    }
+
+                    IDataReader dataReader = blockingStream
+                        .AsDataReader(
+                            fileName,
+                            postAndTag => postTagDataReader?.Push(postAndTag.postId, postAndTag.tags)
+                        );
+
+                    inserter.Insert(dataReader, fileName);
+
+                    // if we have a post tag reader make sure we close it so the queue gets cleared out
+                    // then wait for it to complete
+                    postTagDataReader?.Close();
+                    postTagTask?.Wait();
                 });
 
+
                 Task.WaitAll(decrypt, insert);
+
                 // ReSharper restore AccessToDisposedClosure
             }
         }

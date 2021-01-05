@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.IO;
 using Shouldly;
 using Soddi.Services;
@@ -8,6 +9,24 @@ namespace Soddi.Tests
 {
     public class StreamToDataReaderTests
     {
+        [Fact]
+        public void Tags_are_sent_when_found()
+        {
+            using var stream = File.OpenRead("test-files/eosio.meta.stackexchange.com/Posts.xml");
+            List<(int PostId, string Tags)> postAndTags = new();
+
+            using var dr = stream.AsDataReader("posts.xml", v =>
+            {
+                postAndTags.Add(v);
+            });
+
+            while (dr.Read())
+            {
+            }
+
+            postAndTags.ShouldNotBeEmpty();
+        }
+
         [Fact]
         public void Can_parse_schema()
         {

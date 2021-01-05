@@ -1,21 +1,39 @@
 # DotNet-Soddi (Stack Overflow Data Dump Importer)
 
-Inspirited by the original [Soddi](https://github.com/BrentOzarULTD/soddi), DotNet-Soddi is a console application that assists in not just importing the Stack Overflow data dumps, but also obtaining them.
+Inspirited by the original [Soddi](https://github.com/BrentOzarULTD/soddi), DotNet-Soddi is a console application 
+that assists in not just importing the Stack Overflow data dumps, but also obtaining them.
 
 ## Features
 
+- Discover archives from the command line.
 - Importing data from xml files or stream directly from the .7z archive files.
 - Download archive files from the command line via HTTP based on their site name.
-- Discover archives from the command line.
 - Download archive files via BitTorrent based on their site name.
 
 ## Limitations
 
 Not all features of Soddi are supported.
 
-- The PostTag table isn't supported yet. See [Issue #1](https://github.com/phil-scott-78/dotnet-soddi/issues/1)
 - It's only for SQL Server.
 - Full Text isn't supported.
+
+## Download and install a database in two lines
+
+The following command will download the archive for the math.stackexchange.com, then import it into an existing 
+database named math.stackexchange.com
+
+```bash
+soddi download math
+soddi import math -d math.stackexchange.com
+```
+
+Because of the size of the database and the bandwidth of archive.org, you might be better off using the torrent 
+option. The following command will do everything required to connect to the appropriate trackers and peers to download
+the math database and exit upon completion.
+
+```bash
+soddi torrent math
+```
 
 ## Usage
 
@@ -24,7 +42,8 @@ Not all features of Soddi are supported.
 Downloads a Stack Overflow site archive via HTTP from archive.org.
 
 ```bash
-USAGE
+USAGE:
+
 download archive for aviation.stackexchange.com:
   soddi download aviation
 download archive for math.stackexchange.com to a particular folder:
@@ -41,15 +60,19 @@ download archive for math.stackexchange.com to a particular folder:
 List available Stack Overflow data dumps.
 
 ```bash
-USAGE
+USAGE:
+
 List all archives:
   soddi list
 List all archives containing the letters "av":
   soddi list av
+List all archives containing the letters "av" including meta sites:
+  soddi list --includeMeta av
 
+  --includeMeta       (Default: false) Include meta databases.
   --help              Display this help screen.
   --version           Display version information.
-  Pattern (pos. 0)    Pattern to include (e.g. "av" includes all archives containing "av").
+  Pattern (pos. 0)    (Default: ) Pattern to include (e.g. "av" includes all archives containing "av").
 ```
 
 ### `soddi import`
@@ -57,7 +80,8 @@ List all archives containing the letters "av":
 Import data from a 7z archive or folder
 
 ```bash
-USAGE
+USAGE:
+
 Import data using defaults:
   soddi import math.stackexchange.com.7z
 Import data using a connection string and database name:
@@ -75,18 +99,20 @@ Import data using defaults without constraints:
                             will be dropped. Then a database will be created in the default server file location with
                             the default server options.
   --skipConstraints         (Default: false) Skip adding primary keys and unique constraints.
+  --skipTags                (Default: false) Skip adding PostTags table.
   --help                    Display this help screen.
   --version                 Display version information.
-  Path (pos. 0)             Required. File or folder containing xml archives. The file must be a .7z file. If
-                            using a folder it can contain either .7z or .xml content
+  Path (pos. 0)             Required. File or folder containing xml archives. The file must be a .7z file. If using a
+                            folder it can contain either .7z or .xml content
 ```
 
 ### `soddi torrent`
 
-Experimental. Download database via BitTorrent
+Experimental. Download database via BitTorrent. For larger databases this might prove significantly faster.
 
 ```bash
-USAGE
+USAGE:
+
 Download files associated with the math site from the torrent file:
   soddi torrent math
 Download to a specific folder:
