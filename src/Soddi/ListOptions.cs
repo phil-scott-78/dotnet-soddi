@@ -55,7 +55,7 @@ namespace Soddi
             var parser = new AvailableArchiveParser();
             var results = await parser.Get(cancellationToken);
 
-            var table = new Table { Border = TableBorder.Rounded };
+            var table = new Table { Border = TableBorder.Rounded, Expand = true };
             table.AddColumn(new TableColumn("Short Name"));
             table.AddColumn(new TableColumn("Archive"));
 

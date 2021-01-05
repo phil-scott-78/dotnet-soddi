@@ -17,8 +17,6 @@ namespace Soddi
     {
         public static async Task<int> Main(string[] args)
         {
-            Console.OutputEncoding = System.Text.Encoding.UTF8;
-
 #if DEBUG
             //args = new[] { "import", @"C:\Users\phils\Downloads\aviation.stackexchange.com\", "--dropAndCreate" };
             // args = new[] { "list" };

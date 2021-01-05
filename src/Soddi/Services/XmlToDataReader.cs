@@ -17,7 +17,7 @@ namespace Soddi.Services
         private readonly PropertyInfo[] _typeMapping = typeof(TClass).GetProperties();
         private readonly ConcurrentDictionary<string, int> _ordinalMapping = new();
 
-        private XElement? _element;
+        private XElement? _currentRowElement;
 
         public XmlToDataReader(XmlReader xmlReader, Action<(int postId, string tags)>? onTagFound = null)
         {
@@ -74,10 +74,10 @@ namespace Soddi.Services
         public int GetInt32(int i) => (int.Parse((string)GetValue(i)));
         public string GetName(int i) => _typeMapping[i].Name;
         public string GetDataTypeName(int i) => _typeMapping[i].PropertyType.Name;
-        public bool IsDBNull(int i) => _element?.Attribute(_typeMapping[i].Name) == null;
+        public bool IsDBNull(int i) => _currentRowElement?.Attribute(_typeMapping[i].Name) == null;
         public Type GetFieldType(int i) => _typeMapping[i].PropertyType;
 
-        public object GetValue(int i) => _element?.Attribute(_typeMapping[i].Name)?.Value ??
+        public object GetValue(int i) => _currentRowElement?.Attribute(_typeMapping[i].Name)?.Value ??
                                          throw new Exception("No element to read");
 
         public int FieldCount => _typeMapping.Length;
@@ -100,6 +100,7 @@ namespace Soddi.Services
 
         public bool Read()
         {
+            // loop until we find a row or we hit the end of the records
             do
             {
                 var result = _xmlReader.Read();
@@ -109,25 +110,23 @@ namespace Soddi.Services
                 }
             } while (_xmlReader.NodeType != XmlNodeType.Element && _xmlReader.Name != "row");
 
+            // make sure the current node is an XElement and if so set the current row to it
+            if (!(XNode.ReadFrom(_xmlReader) is XElement el)) return false;
 
-            if (!(XNode.ReadFrom(_xmlReader) is XElement el))
+            _currentRowElement = el;
+
+            // if we aren't a post record or have nothing to publish then we are done and can return
+            // true to indicate there is a row ready to be read
+            if (_onTagFound == null || !IsPost())
             {
-                return false;
+                return true;
             }
 
-            _element = el;
-
-            if (_onTagFound != null && IsPost())
+            // but we are reading a post. publish the tag we found for processing
+            var (idOrdinal, tagOrdinal) = _postTagColumnOrdinals.Value;
+            if (IsDBNull(tagOrdinal) == false)
             {
-                try
-                {
-                    var (idOrdinal, tagOrdinal) = _postTagColumnOrdinals.Value;
-                    _onTagFound.Invoke((GetInt32(idOrdinal), GetString(tagOrdinal)));
-                }
-                catch (Exception)
-                {
-                    /* swallow */
-                }
+                _onTagFound.Invoke((GetInt32(idOrdinal), GetString(tagOrdinal)));
             }
 
             return true;

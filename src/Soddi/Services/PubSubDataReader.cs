@@ -3,6 +3,7 @@ using System.Collections.Concurrent;
 using System.Data;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading;
 
 namespace Soddi.Services
 {
@@ -33,14 +34,16 @@ namespace Soddi.Services
         public float GetFloat(int i) => throw new NotImplementedException();
         public Guid GetGuid(int i) => throw new NotImplementedException();
         public short GetInt16(int i) => throw new NotImplementedException();
-        public int GetInt32(int i) => (int.Parse((string)GetValue(i)));
+        public int GetInt32(int i) => throw new NotImplementedException();
         public long GetInt64(int i) => throw new NotImplementedException();
-        public string GetString(int i) => (string)GetValue(i);
+        public string GetString(int i) => throw new NotImplementedException();
         public int GetValues(object[] values) => throw new NotImplementedException();
         public object this[int i] => throw new NotImplementedException();
         public object this[string name] => throw new NotImplementedException();
         public DataTable GetSchemaTable() => throw new NotImplementedException();
         public bool NextResult() => false;
+        public string GetDataTypeName(int i) => throw new NotImplementedException();
+        public Type GetFieldType(int i) => throw new NotImplementedException();
 
         // these are the things needed by SqlBulkCopy
         public string GetName(int i)
@@ -49,16 +52,6 @@ namespace Soddi.Services
             {
                 0 => "PostId",
                 1 => "Tag",
-                _ => throw new IndexOutOfRangeException("invalid column index - " + i)
-            };
-        }
-
-        public string GetDataTypeName(int i)
-        {
-            return i switch
-            {
-                0 => "Int32",
-                1 => "String",
                 _ => throw new IndexOutOfRangeException("invalid column index - " + i)
             };
         }
@@ -78,15 +71,6 @@ namespace Soddi.Services
             };
         }
 
-        public Type GetFieldType(int i)
-        {
-            return i switch
-            {
-                0 => typeof(int),
-                1 => typeof(string),
-                _ => throw new IndexOutOfRangeException("invalid column index - " + i)
-            };
-        }
 
         private (int PostId, string Tag)? _currentValue;
         private readonly ConcurrentQueue<(int PostId, string Tag)> _tags = new();
@@ -122,6 +106,8 @@ namespace Soddi.Services
 
         public bool Read()
         {
+            var spin = new SpinWait();
+
             while (IsClosed == false)
             {
                 if (_tags.TryDequeue(out var v))
@@ -129,6 +115,8 @@ namespace Soddi.Services
                     _currentValue = v;
                     return true;
                 }
+
+                spin.SpinOnce();
             }
 
             return false;
