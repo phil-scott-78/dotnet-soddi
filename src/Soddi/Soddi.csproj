@@ -18,7 +18,7 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="SharpCompress" Version="0.26.0" />
-    <PackageReference Include="Spectre.Console" Version="0.36.0" />
+    <PackageReference Include="Spectre.Console" Version="0.37.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.2" />
     <PackageReference Include="System.IO.Abstractions" Version="13.2.8" />
   </ItemGroup>

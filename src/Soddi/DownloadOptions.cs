@@ -17,10 +17,11 @@ namespace Soddi
      UsedImplicitly]
     public class DownloadOptions : IRequest<int>
     {
-        public DownloadOptions(string archive, string output)
+        public DownloadOptions(string archive, string output, bool pick)
         {
             Archive = archive;
             Output = output;
+            Pick = pick;
         }
 
         [Value(0, HelpText = "Archive to download", Required = true, MetaName = "Archive")]
@@ -29,15 +30,20 @@ namespace Soddi
         [Option('o', "output", HelpText = "Output folder")]
         public string Output { get; }
 
+        [Option('p', "pick", HelpText = "Pick from a list of archives to download", Default = false)]
+        public bool Pick { get; }
+
         [Usage(ApplicationAlias = "soddi"), UsedImplicitly]
         public static IEnumerable<Example> Examples
         {
             get
             {
-                yield return new Example("download archive for aviation.stackexchange.com",
-                    new DownloadOptions("aviation", ""));
-                yield return new Example("download archive for math.stackexchange.com to a particular folder",
-                    new DownloadOptions("math", "c:\\stack-data"));
+                yield return new Example("Download archive for aviation.stackexchange.com",
+                    new DownloadOptions("aviation", "", false));
+                yield return new Example("Download archive for math.stackexchange.com to a particular folder",
+                    new DownloadOptions("math", "c:\\stack-data", false));
+                yield return new Example("Pick from archives containing \"stack\" and download",
+                    new DownloadOptions("stack", "", true));
             }
         }
     }
@@ -64,17 +70,8 @@ namespace Soddi
                 throw new SoddiException($"Output path {outputPath} not found");
             }
 
-            var parser = new AvailableArchiveParser();
-            var results = await parser.Get(cancellationToken);
-            var archiveUrl = results
-                .FirstOrDefault(i => i.ShortName == request.Archive ||
-                                     i.LongName == request.Archive ||
-                                     i.ShortName.Contains($"{request.Archive}-"));
-
-            if (archiveUrl == null || archiveUrl.Uris.Count == 0)
-            {
-                throw new SoddiException($"Could not find archive named {request.Archive}");
-            }
+            var availableArchiveParser = new AvailableArchiveParser();
+            var archiveUrl = await availableArchiveParser.FindOrPickArchive(request.Archive, request.Pick, cancellationToken);
 
             await AnsiConsole.Progress()
                 .AutoClear(false)

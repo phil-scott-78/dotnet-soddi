@@ -19,11 +19,12 @@ namespace Soddi
     [Verb("torrent", HelpText = "[bold red]Experimental[/]. Download database via BitTorrent"), UsedImplicitly]
     public class TorrentOptions : IRequest<int>
     {
-        public TorrentOptions(string archive, string output, bool enablePortForwarding)
+        public TorrentOptions(string archive, string output, bool enablePortForwarding, bool pick)
         {
             Archive = archive;
             Output = output;
             EnablePortForwarding = enablePortForwarding;
+            Pick = pick;
         }
 
         [Value(0, HelpText = "Archive to download", Required = true, MetaName = "Archive")]
@@ -35,17 +36,22 @@ namespace Soddi
         [Option('f', "portForward", HelpText = "[red]Experimental[/]. Enable port forwarding", Default = false)]
         public bool EnablePortForwarding { get; }
 
+        [Option('p', "pick", HelpText = "Pick from a list of archives to download", Default = false)]
+        public bool Pick { get; }
+
         [Usage(ApplicationAlias = "soddi"), UsedImplicitly]
         public static IEnumerable<Example> Examples
         {
             get
             {
                 yield return new Example("Download files associated with the math site from the torrent file",
-                    new TorrentOptions("math", "", false));
+                    new TorrentOptions("math", "", false, false));
                 yield return new Example("Download to a specific folder",
-                    new TorrentOptions("math", "c:\\torrent files", false));
+                    new TorrentOptions("math", "c:\\torrent files", false, false));
                 yield return new Example("Enable port forwarding",
-                    new TorrentOptions("math", "", true));
+                    new TorrentOptions("math", "", true, false));
+                yield return new Example("Pick from archives containing \"stack\"",
+                    new TorrentOptions("stack", "", false, true));
             }
         }
     }
@@ -79,27 +85,18 @@ namespace Soddi
                 .AutoClear(false)
                 .Columns(new ProgressColumn[]
                 {
-                    new SpinnerColumn(),
-                    new FixedTaskDescriptionColumn(Math.Clamp(AnsiConsole.Width, 40, 65)),
-                    new ProgressBarColumn(),
-                    new PercentageColumn(),
-                    new RemainingTimeColumn()
+                    new SpinnerColumn(), new FixedTaskDescriptionColumn(Math.Clamp(AnsiConsole.Width, 40, 65)),
+                    new ProgressBarColumn(), new PercentageColumn(), new RemainingTimeColumn()
                 });
+
+            AnsiConsole.WriteLine("Finding archive files...");
+
+            var availableArchiveParser = new AvailableArchiveParser();
+            var archiveUrl =
+                await availableArchiveParser.FindOrPickArchive(request.Archive, request.Pick, cancellationToken);
 
             await progressBar.StartAsync(async ctx =>
             {
-                AnsiConsole.WriteLine("Finding archive files...");
-
-                var parser = new AvailableArchiveParser();
-                var results = await parser.Get(cancellationToken);
-                var archiveUrl = results.FirstOrDefault(i => i.ShortName == request.Archive ||
-                                                             i.LongName == request.Archive ||
-                                                             i.ShortName.Contains($"{request.Archive}-"));
-                if (archiveUrl == null)
-                {
-                    throw new SoddiException($"Archive named {request.Archive} not found");
-                }
-
                 AnsiConsole.WriteLine("Loading torrent...");
                 const string Url = "https://archive.org/download/stackexchange/stackexchange_archive.torrent";
                 var httpClient = new HttpClient();

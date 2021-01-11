@@ -6,6 +6,7 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using System.Xml.Linq;
+using Spectre.Console;
 
 namespace Soddi.Services
 {
@@ -93,10 +94,74 @@ namespace Soddi.Services
                     archive.uris));
         }
 
+        public async Task<Archive> FindOrPickArchive(string archive, bool canUserPick,
+            CancellationToken cancellationToken)
+        {
+            var parser = new AvailableArchiveParser();
+            var results = (await parser.Get(cancellationToken)).ToList();
+            var archiveUrl = results
+                .FirstOrDefault(i => i.ShortName == archive ||
+                                     i.LongName == archive ||
+                                     i.ShortName.Contains($"{archive}-"));
+
+            if (archiveUrl != null)
+            {
+                return archiveUrl;
+            }
+
+            if (canUserPick == false)
+            {
+                throw new SoddiException($"Could not find archive named {archive}");
+            }
+
+            var filteredResults = results.Where(i =>
+                i.ShortName.Contains(archive, StringComparison.InvariantCultureIgnoreCase)).ToList();
+
+            if (filteredResults.Any() == false)
+            {
+                throw new SoddiException($"Could not find archive named {archive}");
+            }
+
+            var item = AnsiConsole.Prompt(
+                new SelectionPrompt<ArchiveSelectionOption>()
+                    .PageSize(10)
+                    .Title("Pick an archive to download")
+                    .AddChoices(filteredResults
+                        .Where(i => i.ShortName.Contains("meta.", StringComparison.InvariantCultureIgnoreCase) == false)
+                        .Select(ArchiveSelectionOption.FromArchive)));
+
+            return results.First(i => i.ShortName.Equals(item.ShortName, StringComparison.InvariantCultureIgnoreCase));
+        }
+
+
         private static string StripDashName(string input)
         {
             var index = input.IndexOf("-", StringComparison.Ordinal);
             return index < 0 ? input : input.Substring(0, index);
+        }
+    }
+
+    internal class ArchiveSelectionOption
+    {
+        private readonly string _title;
+
+        private ArchiveSelectionOption(string shortName, string title)
+        {
+            ShortName = shortName;
+            _title = title;
+        }
+
+        public static ArchiveSelectionOption FromArchive(Archive archive)
+        {
+            return new(archive.ShortName,
+                $"{archive.LongName} {archive.Uris.Sum(i => i.SizeInBytes).BytesToString()}");
+        }
+
+        public string ShortName { get; }
+
+        public override string ToString()
+        {
+            return _title;
         }
     }
 }

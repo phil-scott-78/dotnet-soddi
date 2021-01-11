@@ -48,8 +48,11 @@ download archive for aviation.stackexchange.com:
   soddi download aviation
 download archive for math.stackexchange.com to a particular folder:
   soddi download --output c:\stack-data math
+pick from archives containing stack and download:
+  soddi download --pick stack
 
   -o, --output        Output folder
+  -p, --pick          (Default: false) Pick from a list of archives to download
   --help              Display this help screen.
   --version           Display version information.
   Archive (pos. 0)    Required. Archive to download
@@ -119,9 +122,12 @@ Download to a specific folder:
   soddi torrent --output "c:\torrent files" math
 Enable port forwarding:
   soddi torrent --portForward math
+Pick from archives containing "stack":
+  soddi torrent --pick stack
 
   -o, --output         Output folder
   -f, --portForward    (Default: false) Experimental. Enable port forwarding
+  -p, --pick           (Default: false) Pick from a list of archives to download
   --help               Display this help screen.
   --version            Display version information.
   Archive (pos. 0)     Required. Archive to download

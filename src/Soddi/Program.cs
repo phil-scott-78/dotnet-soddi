@@ -20,9 +20,9 @@ namespace Soddi
 #if DEBUG
             //args = new[] { "import", @"C:\Users\phils\Downloads\aviation.stackexchange.com\", "--dropAndCreate" };
             // args = new[] { "list" };
-            // args = new[] { "download", "space" };
-            // args = new[] { "torrent", "math" };
-            args = new[] { "import", @"iota.stackexchange.com.7z", "--dropAndCreate" };
+            // args = new[] { "download", "sp", "-p" };
+            // args = new[] { "torrent", "stack", "-p" };
+            // args = new[] { "import", @"iota.stackexchange.com.7z", "--dropAndCreate" };
             // args = new string[] {"help", "torrent"};
 #endif
 
