@@ -1,54 +1,35 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO.Abstractions;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using CommandLine;
-using CommandLine.Text;
 using JetBrains.Annotations;
-using MediatR;
 using Soddi.Services;
 using Spectre.Console;
+using Spectre.Console.Cli;
 
 namespace Soddi
 {
-    [Verb("download", HelpText = "Download the most recent data dump for a Stack Overflow site from archive.org"),
-     UsedImplicitly]
-    public class DownloadOptions : IRequest<int>
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+    public class DownloadOptions : CommandSettings
     {
-        public DownloadOptions(string archive, string output, bool pick)
-        {
-            Archive = archive;
-            Output = output;
-            Pick = pick;
-        }
+        [CommandArgument(0, "<ARCHIVE_NAME>")]
+        [Description("Archive to download")]
+        public string Archive { get; set; } = "";
 
-        [Value(0, HelpText = "Archive to download", Required = true, MetaName = "Archive")]
-        public string Archive { get; }
+        [CommandOption("-o|--output")]
+        [Description("Output folder")]
+        public string? Output { get; set; }
 
-        [Option('o', "output", HelpText = "Output folder")]
-        public string Output { get; }
-
-        [Option('p', "pick", HelpText = "Pick from a list of archives to download", Default = false)]
-        public bool Pick { get; }
-
-        [Usage(ApplicationAlias = "soddi"), UsedImplicitly]
-        public static IEnumerable<Example> Examples
-        {
-            get
-            {
-                yield return new Example("Download archive for aviation.stackexchange.com",
-                    new DownloadOptions("aviation", "", false));
-                yield return new Example("Download archive for math.stackexchange.com to a particular folder",
-                    new DownloadOptions("math", "c:\\stack-data", false));
-                yield return new Example("Pick from archives containing \"stack\" and download",
-                    new DownloadOptions("stack", "", true));
-            }
-        }
+        [CommandOption("-p|--pick")]
+        [Description("Pick from a list of archives to download")]
+        public bool Pick { get; set; }
     }
 
-    public class DownloadHandler : IRequestHandler<DownloadOptions, int>
+    [UsedImplicitly]
+    public class DownloadHandler : AsyncCommand<DownloadOptions>
     {
         private readonly IFileSystem _fileSystem;
 
@@ -57,8 +38,11 @@ namespace Soddi
             _fileSystem = fileSystem;
         }
 
-        public async Task<int> Handle(DownloadOptions request, CancellationToken cancellationToken)
+
+        public override async Task<int> ExecuteAsync(CommandContext context, DownloadOptions request)
         {
+            var cancellationToken = CancellationToken.None;
+
             var outputPath = request.Output;
             if (string.IsNullOrWhiteSpace(outputPath))
             {
@@ -71,7 +55,8 @@ namespace Soddi
             }
 
             var availableArchiveParser = new AvailableArchiveParser();
-            var archiveUrl = await availableArchiveParser.FindOrPickArchive(request.Archive, request.Pick, cancellationToken);
+            var archiveUrl =
+                await availableArchiveParser.FindOrPickArchive(request.Archive, request.Pick, cancellationToken);
 
             await AnsiConsole.Progress()
                 .AutoClear(false)

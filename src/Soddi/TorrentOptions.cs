@@ -1,62 +1,40 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO.Abstractions;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using CommandLine;
-using CommandLine.Text;
 using JetBrains.Annotations;
-using MediatR;
 using MonoTorrent;
 using MonoTorrent.Client;
 using Soddi.Services;
 using Spectre.Console;
+using Spectre.Console.Cli;
 
 namespace Soddi
 {
-    [Verb("torrent", HelpText = "[bold red]Experimental[/]. Download database via BitTorrent"), UsedImplicitly]
-    public class TorrentOptions : IRequest<int>
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+    public class TorrentOptions : CommandSettings
     {
-        public TorrentOptions(string archive, string output, bool enablePortForwarding, bool pick)
-        {
-            Archive = archive;
-            Output = output;
-            EnablePortForwarding = enablePortForwarding;
-            Pick = pick;
-        }
+        [CommandArgument(0, "<ARCHIVE_NAME>")]
+        [Description("Archive to download")]
+        public string Archive { get; set; } = "";
 
-        [Value(0, HelpText = "Archive to download", Required = true, MetaName = "Archive")]
-        public string Archive { get; }
+        [CommandOption("-o|--output")]
+        [Description("Output folder")]
+        public string? Output { get; set; }
 
-        [Option('o', "output", HelpText = "Output folder")]
-        public string Output { get; }
+        [CommandOption("-f|--portForward")]
+        [Description("[red]Experimental[/]. Enable port forwarding")]
+        public bool EnablePortForwarding { get; set; }
 
-        [Option('f', "portForward", HelpText = "[red]Experimental[/]. Enable port forwarding", Default = false)]
-        public bool EnablePortForwarding { get; }
-
-        [Option('p', "pick", HelpText = "Pick from a list of archives to download", Default = false)]
-        public bool Pick { get; }
-
-        [Usage(ApplicationAlias = "soddi"), UsedImplicitly]
-        public static IEnumerable<Example> Examples
-        {
-            get
-            {
-                yield return new Example("Download files associated with the math site from the torrent file",
-                    new TorrentOptions("math", "", false, false));
-                yield return new Example("Download to a specific folder",
-                    new TorrentOptions("math", "c:\\torrent files", false, false));
-                yield return new Example("Enable port forwarding",
-                    new TorrentOptions("math", "", true, false));
-                yield return new Example("Pick from archives containing \"stack\"",
-                    new TorrentOptions("stack", "", false, true));
-            }
-        }
+        [CommandOption("-p|--pick")]
+        [Description("Pick from a list of archives to download")]
+        public bool Pick { get; set; }
     }
 
-    public class TorrentHandler : IRequestHandler<TorrentOptions, int>
+    public class TorrentHandler : AsyncCommand<TorrentOptions>
     {
         private readonly IFileSystem _fileSystem;
 
@@ -65,8 +43,10 @@ namespace Soddi
             _fileSystem = fileSystem;
         }
 
-        public async Task<int> Handle(TorrentOptions request, CancellationToken cancellationToken)
+        public override async Task<int> ExecuteAsync(CommandContext context, TorrentOptions request)
         {
+            var cancellationToken = CancellationToken.None;
+
             var outputPath = request.Output;
             if (string.IsNullOrWhiteSpace(outputPath))
             {

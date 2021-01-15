@@ -4,7 +4,6 @@ using System.Data;
 using System.IO;
 using System.Linq;
 using System.Xml;
-using LamarCodeGeneration.Util;
 using Soddi.TableTypes;
 
 namespace Soddi.Services
@@ -21,7 +20,18 @@ namespace Soddi.Services
                 i => typeof(XmlToDataReader<>).MakeGenericType(i.Type)
             );
 
-        public static IDataReader AsDataReader(this Stream entryStream, string filename, Action<(int postId, string tags)>? onTagFound = null)
+        private static bool HasAttribute<T>(this Type provider) where T : Attribute
+        {
+            return provider.IsDefined(typeof(T), true);
+        }
+
+        private static T GetAttribute<T>(this Type provider) where T : Attribute
+        {
+            return (T)provider.GetCustomAttributes(typeof(T), true).First();
+        }
+
+        public static IDataReader AsDataReader(this Stream entryStream, string filename,
+            Action<(int postId, string tags)>? onTagFound = null)
         {
             var xmlReader = XmlReader.Create(entryStream);
             var type = s_stringToXmlReaderType[filename] ?? throw new Exception("Unknown archive file - " + filename);

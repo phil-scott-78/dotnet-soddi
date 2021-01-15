@@ -4,20 +4,19 @@
     <OutputType>Exe</OutputType>
     <TargetFramework>net5.0</TargetFramework>
     <Nullable>enable</Nullable>
-    <LangVersion>preview</LangVersion>
+    <LangVersion>9</LangVersion>
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="CommandLineParser" Version="2.9.0-preview1" />
     <PackageReference Include="JetBrains.Annotations" Version="2020.3.0" />
-    <PackageReference Include="Lamar" Version="5.0.0" />
-    <PackageReference Include="MediatR" Version="9.0.0" />
     <PackageReference Include="MonoTorrent" Version="1.0.28" />
     <PackageReference Include="Roslyn.System.IO.Abstractions.Analyzers" Version="12.2.19">
       <PrivateAssets>all</PrivateAssets>
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
+    <PackageReference Include="Scrutor" Version="3.3.0" />
     <PackageReference Include="SharpCompress" Version="0.26.0" />
+    <PackageReference Include="Spectre.Cli.Extensions.DependencyInjection" Version="0.3.0" />
     <PackageReference Include="Spectre.Console" Version="0.37.0" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.2" />
     <PackageReference Include="System.IO.Abstractions" Version="13.2.8" />

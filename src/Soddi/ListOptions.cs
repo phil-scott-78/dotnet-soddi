@@ -1,57 +1,35 @@
 ﻿using System;
-using System.Collections.Generic;
+using System.ComponentModel;
 using System.Globalization;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using CommandLine;
-using CommandLine.Text;
 using JetBrains.Annotations;
-using MediatR;
 using Soddi.Services;
 using Spectre.Console;
+using Spectre.Console.Cli;
 
 namespace Soddi
 {
-    [Verb("list", HelpText = "List available Stack Overflow data dumps."), UsedImplicitly]
-    public class ListOptions : IRequest<int>
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+    public class ListOptions : CommandSettings
     {
-        public ListOptions(string pattern, bool includeMeta)
-        {
-            Pattern = pattern;
-            IncludeMeta = includeMeta;
-        }
+        [CommandArgument(0, "[PATTERN]")]
+        [Description("Pattern to include (e.g. \"av\" includes all archives containing \"av\").")]
+        public string? Pattern { get; set; }
 
-        [Value(0, MetaName = "Pattern", Required = false, Default = "",
-            HelpText = "Pattern to include (e.g. \"av\" includes all archives containing \"av\").")]
-        public string Pattern { get; }
-
-        [Option("includeMeta",
-            HelpText = "Include meta databases.",
-            Required = false,
-            Default = false)]
-        public bool IncludeMeta { get; }
-
-        [Usage(ApplicationAlias = "soddi"), UsedImplicitly]
-        public static IEnumerable<Example> Examples
-        {
-            get
-            {
-                yield return new Example("List all archives",
-                    new ListOptions("", false));
-                yield return new Example("List all archives containing the letters \"av\"",
-                    new ListOptions("av", false));
-                yield return new Example("List all archives containing the letters \"av\" including meta sites",
-                    new ListOptions("av", true));
-            }
-        }
+        [CommandOption("--includeMeta")]
+        [Description("Include meta databases.")]
+        public bool IncludeMeta { get; set; }
     }
 
-    public class ListHandler : IRequestHandler<ListOptions, int>
+    public class ListHandler : AsyncCommand<ListOptions>
     {
-        public async Task<int> Handle(ListOptions request, CancellationToken cancellationToken)
+        public override async Task<int> ExecuteAsync(CommandContext context, ListOptions request)
         {
-            var pattern = request.Pattern;
+            var cancellationToken = CancellationToken.None;
+
+            var pattern = request.Pattern ?? "";
             var parser = new AvailableArchiveParser();
             var results = await parser.Get(cancellationToken);
 

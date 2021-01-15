@@ -50,7 +50,7 @@ namespace Soddi.Services
         /// <param name="path">Path to archive. Can be a folder or a file.</param>
         /// <returns></returns>
         /// <exception cref="FileNotFoundException"></exception>
-        public string GetDbNameFromPathOption(string databaseName, string path)
+        public string GetDbNameFromPathOption(string? databaseName, string path)
         {
             if (!string.IsNullOrWhiteSpace(databaseName))
             {

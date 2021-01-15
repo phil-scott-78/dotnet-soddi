@@ -1,88 +1,60 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.ComponentModel;
 using System.IO.Abstractions;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
-using CommandLine;
-using CommandLine.Text;
 using JetBrains.Annotations;
-using MediatR;
 using Soddi.Services;
 using Soddi.Tasks;
 using Soddi.Tasks.SqlServer;
 using Spectre.Console;
+using Spectre.Console.Cli;
 
 namespace Soddi
 {
-    [Verb("import", HelpText = "Import data from a 7z archive or folder"), UsedImplicitly]
-    public class ImportOptions : IRequest<int>
+    [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
+    public class ImportOptions : CommandSettings
     {
-        public ImportOptions(string path, string databaseName, string connectionString, bool dropAndRecreate,
-            bool skipPrimaryKeys, bool skipTags)
-        {
-            Path = path;
-            DatabaseName = databaseName;
-            ConnectionString = connectionString;
-            DropAndRecreate = dropAndRecreate;
-            SkipPrimaryKeys = skipPrimaryKeys;
-            SkipTags = skipTags;
-        }
+        [CommandArgument(0, "<PATH>")]
+        [Description(
+            "File or folder containing xml archives. The file must be a .7z file. If using a folder it can contain either .7z or .xml content")]
+        public string Path { get; set; } = "";
 
-        [Value(0, Required = true, MetaName = "Path",
-            HelpText =
-                "File or folder containing xml archives. The file must be a .7z file. If using a folder it can contain either .7z or .xml content")]
-        public string Path { get; }
+        [CommandOption("-d|--database")]
+        [Description("Name of database. If omitted the name of the file or folder will be used.")]
+        public string? DatabaseName { get; set; }
 
-        [Option('d', "database",
-            HelpText = "Name of database. If omitted the name of the file or folder will be used.")]
-        public string DatabaseName { get; }
+        [CommandOption("-c|--connectionString")]
+        [Description(
+            "Connection string to server. Initial catalog will be ignored and the database parameter will be used for the database name.")]
+        public string ConnectionString { get; set; } = "Server=.;Integrated Security=true";
 
-        [Option('c', "connectionString",
-            HelpText =
-                "Connection string to server. Initial catalog will be ignored and the database parameter will be used for the database name.",
-            Default = "Server=.;Integrated Security=true")]
-        public string ConnectionString { get; }
+        [CommandOption("--dropAndCreate")]
+        [Description(
+            "Drop and recreate database. If a database already exists with this name it will be dropped. Then a database will be created in the default server file location with the default server options.")]
+        public bool DropAndRecreate { get; set; }
 
-        [Option("dropAndCreate",
-            HelpText =
-                "Drop and recreate database. If a database already exists with this name it will be dropped. Then a database will be created in the default server file location with the default server options.",
-            Default = false)]
-        public bool DropAndRecreate { get; }
+        [CommandOption("--skipConstraints")]
+        [Description("Skip adding primary keys and unique constraints.")]
+        public bool SkipPrimaryKeys { get; set; }
 
-        [Option("skipConstraints", HelpText = "Skip adding primary keys and unique constraints.", Default = false)]
-        public bool SkipPrimaryKeys { get; }
-
-        [Option("skipTags", HelpText = "Skip adding PostTags table.", Default = false)]
-        public bool SkipTags { get; }
-
-        [Usage(ApplicationAlias = "soddi"), UsedImplicitly]
-        public static IEnumerable<Example> Examples
-        {
-            get
-            {
-                yield return new Example("Import data using defaults",
-                    new ImportOptions("math.stackexchange.com.7z", "", "", false, false, false));
-                yield return new Example("Import data using a connection string and database name",
-                    new ImportOptions("math.stackexchange.com.7z", "math",
-                        "Server=(local)\\Sql2017;User Id=admin;password=t3ddy", false, false, false));
-                yield return new Example("Import data using defaults and create database",
-                    new ImportOptions("math.stackexchange.com.7z", "", "", true, false, false));
-                yield return new Example("Import data using defaults without constraints",
-                    new ImportOptions("math.stackexchange.com.7z", "", "", false, true, false));
-            }
-        }
+        [CommandOption("--skipTags")]
+        [Description("Skip adding PostTags table.")]
+        public bool SkipTags { get; set; }
     }
 
 
-    public class ImportHandler : IRequestHandler<ImportOptions, int>
+    public class ImportHandler : AsyncCommand<ImportOptions>
     {
         private readonly AvailableArchiveParser _availableArchiveParser;
         private readonly DatabaseHelper _databaseHelper;
         private readonly ProcessorFactory _processorFactory;
         private readonly IFileSystem _fileSystem;
 
-        public ImportHandler(DatabaseHelper databaseHelper, ProcessorFactory processorFactory, IFileSystem fileSystem, AvailableArchiveParser availableArchiveParser)
+        public ImportHandler(DatabaseHelper databaseHelper, ProcessorFactory processorFactory, IFileSystem fileSystem,
+            AvailableArchiveParser availableArchiveParser)
         {
             _databaseHelper = databaseHelper;
             _processorFactory = processorFactory;
@@ -110,8 +82,10 @@ namespace Soddi
             throw new SoddiException("Could not find archive " + path);
         }
 
-        public async Task<int> Handle(ImportOptions request, CancellationToken cancellationToken)
+        public override async Task<int> ExecuteAsync(CommandContext context, ImportOptions request)
         {
+            var cancellationToken = CancellationToken.None;
+
             var requestPath = await CheckAndFixupPath(request.Path, cancellationToken);
             var dbName = _databaseHelper.GetDbNameFromPathOption(request.DatabaseName, requestPath);
             var tasks = new Queue<(string name, ITask task)>();
@@ -136,17 +110,15 @@ namespace Soddi
             }
 
             tasks.Enqueue(("Insert type values", new InsertTypeValues(databaseConnectionString)));
-            tasks.Enqueue(("Insert data from archive", new InsertData(databaseConnectionString, dbName, processor, !request.SkipTags)));
+            tasks.Enqueue(("Insert data from archive",
+                new InsertData(databaseConnectionString, dbName, processor, !request.SkipTags)));
 
             var progressBar = AnsiConsole.Progress()
                 .AutoClear(false)
                 .Columns(new ProgressColumn[]
                 {
-                    new SpinnerColumn(),
-                    new FixedTaskDescriptionColumn(40),
-                    new ProgressBarColumn(),
-                    new PercentageColumn(),
-                    new RemainingTimeColumn(),
+                    new SpinnerColumn(), new FixedTaskDescriptionColumn(40), new ProgressBarColumn(),
+                    new PercentageColumn(), new RemainingTimeColumn(),
                 });
 
             progressBar.Start(ctx =>
