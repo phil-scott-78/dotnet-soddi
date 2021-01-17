@@ -11,7 +11,7 @@ using Spectre.Console.Cli;
 // args = new[] { "torrent", "stack", "-p" };
 // args = new[] { "download", "iota" };
 // args = new[] { "import", @"iota.stackexchange.com.7z", "--dropAndCreate" };
-args = new[] { "-h" };
+args = new[] { "list", "-h" };
 #endif
 
 {
@@ -26,14 +26,10 @@ args = new[] { "-h" };
         config =>
         {
             config.SetApplicationName("soddi");
-            config.AddCommand<ImportHandler>("import")
-                .WithDescription("Import an archive into SQL Server");
-            config.AddCommand<ListHandler>("list")
-                .WithDescription("List available archives");
-            config.AddCommand<DownloadHandler>("download")
-                .WithDescription("Download an archive");
-            config.AddCommand<TorrentHandler>("torrent")
-                .WithDescription("Download an archive via bittorrent");
+            config.AddCommandWithExample<ImportHandler>("import", ImportOptions.Examples);
+            config.AddCommandWithExample<ListHandler>("list", ListOptions.Examples);
+            config.AddCommandWithExample<DownloadHandler>("download", DownloadOptions.Examples);
+            config.AddCommandWithExample<TorrentHandler>("torrent", TorrentOptions.Examples);
         });
 
     await app.RunAsync(args);

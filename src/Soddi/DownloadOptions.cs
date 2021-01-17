@@ -26,6 +26,13 @@ namespace Soddi
         [CommandOption("-p|--pick")]
         [Description("Pick from a list of archives to download")]
         public bool Pick { get; set; }
+
+        public static readonly string[][] Examples =
+        {
+            new[] { "download", "iota" },
+            new[] { "download", "iota", "-o", "\"/data/\"" },
+            new[] { "download", "spa", "-p" }
+        };
     }
 
     [UsedImplicitly]

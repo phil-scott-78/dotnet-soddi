@@ -43,6 +43,12 @@ namespace Soddi
         [CommandOption("--skipTags")]
         [Description("Skip adding PostTags table.")]
         public bool SkipTags { get; set; }
+
+        public static readonly string[][] Examples =
+        {
+            new[] { "import", "iota" }, new[] { "import", "iota.stackexchange.co.7z", "--dropAndCreate" },
+            new[] { "import", "/data/iota.stackexchange.co/", "--skipTags" },
+        };
     }
 
 

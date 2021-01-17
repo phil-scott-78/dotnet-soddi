@@ -32,6 +32,12 @@ namespace Soddi
         [CommandOption("-p|--pick")]
         [Description("Pick from a list of archives to download")]
         public bool Pick { get; set; }
+
+        public static readonly string[][] Examples =
+        {
+            new[] { "torrent", "iota" }, new[] { "torrent", "iota", "-o", "/data/" },
+            new[] { "torrent", "spa", "-p", "-f" }
+        };
     }
 
     public class TorrentHandler : AsyncCommand<TorrentOptions>

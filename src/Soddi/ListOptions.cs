@@ -21,6 +21,8 @@ namespace Soddi
         [CommandOption("--includeMeta")]
         [Description("Include meta databases.")]
         public bool IncludeMeta { get; set; }
+
+        public static readonly string[][] Examples = { new[] { "list" }, new[] { "list", "spa" } };
     }
 
     public class ListHandler : AsyncCommand<ListOptions>
