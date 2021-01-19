@@ -123,8 +123,9 @@ namespace Soddi
                 .AutoClear(false)
                 .Columns(new ProgressColumn[]
                 {
-                    new SpinnerColumn(), new FixedTaskDescriptionColumn(40), new ProgressBarColumn(),
-                    new PercentageColumn(), new RemainingTimeColumn(),
+                    new SpinnerColumn() { CompletedText = Emoji.Known.CheckMark },
+                    new FixedTaskDescriptionColumn(40), new ProgressBarColumn(), new PercentageColumn(),
+                    new RemainingTimeColumn(),
                 });
 
             progressBar.Start(ctx =>

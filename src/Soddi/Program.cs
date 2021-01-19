@@ -1,17 +1,20 @@
-﻿using System.IO.Abstractions;
+﻿using System;
+using System.IO.Abstractions;
+using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Soddi;
 using Spectre.Cli.Extensions.DependencyInjection;
 using Spectre.Console.Cli;
 
 #if DEBUG
+Console.OutputEncoding = Encoding.UTF8;
 //args = new[] { "import", @"C:\Users\phils\Downloads\aviation.stackexchange.com\", "--dropAndCreate" };
 // args = new[] { "list" };
 // args = new[] { "download", "sp", "-p" };
 // args = new[] { "torrent", "stack", "-p" };
-// args = new[] { "download", "iota" };
+args = new[] { "torrent", "iota" };
 // args = new[] { "import", @"iota.stackexchange.com.7z", "--dropAndCreate" };
-args = new[] { "list", "-h" };
+// args = new[] { "list", "-h" };
 #endif
 
 {

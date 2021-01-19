@@ -29,8 +29,7 @@ namespace Soddi
 
         public static readonly string[][] Examples =
         {
-            new[] { "download", "iota" },
-            new[] { "download", "iota", "-o", "\"/data/\"" },
+            new[] { "download", "iota" }, new[] { "download", "iota", "-o", "\"/data/\"" },
             new[] { "download", "spa", "-p" }
         };
     }
@@ -69,29 +68,26 @@ namespace Soddi
                 .AutoClear(false)
                 .Columns(new ProgressColumn[]
                 {
-                    new SpinnerColumn(), new FixedTaskDescriptionColumn(Math.Clamp(AnsiConsole.Width, 40, 65)),
-                    new ProgressBarColumn(), new PercentageColumn(), new RemainingTimeColumn(),
+                    new SpinnerColumn { CompletedText = Emoji.Known.CheckMark }, new DownloadedColumn(),
+                    new FixedTaskDescriptionColumn(Math.Clamp(AnsiConsole.Width, 40, 65)), new ProgressBarColumn(),
+                    new PercentageColumn(), new TransferSpeedColumn(), new RemainingTimeColumn(),
                 }).StartAsync(async ctx =>
                 {
                     List<(ProgressTask Task, Archive.UriWithSize UriWithSize)> tasks = archiveUrl.Uris
-                        .Select(uriWithSize => (ctx.AddTask(uriWithSize.Description()), uriWithSize))
+                        .Select(uriWithSize => (ctx.AddTask(uriWithSize.Description(false)), uriWithSize))
                         .ToList();
 
                     while (!ctx.IsFinished)
                     {
                         foreach (var (task, uriWithSize) in tasks)
                         {
-                            var progress = new Progress<(int downloadedInKb, int totalSizeInKb)>(i =>
+                            var progress = new Progress<(int downloadedInBytes, int totalSizeInBytes)>(i =>
                                 {
                                     var progressTask = task;
-                                    var (downloadedInKb, totalSizeInKb) = i;
+                                    var (downloadedInBytes, totalSizeInBytes) = i;
 
-                                    progressTask.Increment(downloadedInKb);
-                                    progressTask.MaxValue(totalSizeInKb);
-
-                                    var description =
-                                        $"{uriWithSize.Description(false)} - {progressTask.Value.KiloBytesToString()}/{progressTask.MaxValue.KiloBytesToString()}";
-                                    progressTask.Description(description);
+                                    progressTask.Increment(downloadedInBytes);
+                                    progressTask.MaxValue(totalSizeInBytes);
                                 }
                             );
 

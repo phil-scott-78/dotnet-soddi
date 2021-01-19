@@ -71,8 +71,9 @@ namespace Soddi
                 .AutoClear(false)
                 .Columns(new ProgressColumn[]
                 {
-                    new SpinnerColumn(), new FixedTaskDescriptionColumn(Math.Clamp(AnsiConsole.Width, 40, 65)),
-                    new ProgressBarColumn(), new PercentageColumn(), new RemainingTimeColumn()
+                    new SpinnerColumn { CompletedText = Emoji.Known.CheckMark }, new DownloadedColumn(),
+                    new FixedTaskDescriptionColumn(Math.Clamp(AnsiConsole.Width, 40, 65)), new ProgressBarColumn(),
+                    new PercentageColumn(), new TransferSpeedColumn(), new RemainingTimeColumn()
                 });
 
             AnsiConsole.WriteLine("Finding archive files...");
@@ -81,13 +82,25 @@ namespace Soddi
             var archiveUrl =
                 await availableArchiveParser.FindOrPickArchive(request.Archive, request.Pick, cancellationToken);
 
+            var potentialArchives = new[]
+            {
+                archiveUrl.LongName + ".7z", $"{archiveUrl.LongName}-Badges.7z",
+                $"{archiveUrl.LongName}-Comments.7z", $"{archiveUrl.LongName}-PostHistory.7z",
+                $"{archiveUrl.LongName}-PostLinks.7z", $"{archiveUrl.LongName}-Posts.7z",
+                $"{archiveUrl.LongName}-Tags.7z", $"{archiveUrl.LongName}-Users.7z",
+                $"{archiveUrl.LongName}-Votes.7z"
+            };
+
             await progressBar.StartAsync(async ctx =>
             {
                 AnsiConsole.WriteLine("Loading torrent...");
                 const string Url = "https://archive.org/download/stackexchange/stackexchange_archive.torrent";
                 var httpClient = new HttpClient();
                 var torrentContents = await httpClient.GetByteArrayAsync(Url, cancellationToken);
-                var settings = new EngineSettings { AllowedEncryption = EncryptionTypes.All, SavePath = outputPath };
+                var settings = new EngineSettings
+                {
+                    AllowedEncryption = EncryptionTypes.All, SavePath = outputPath, MaximumHalfOpenConnections = 16
+                };
 
                 AnsiConsole.WriteLine("Initializing BitTorrent engine...");
                 var engine = new ClientEngine(settings);
@@ -101,8 +114,7 @@ namespace Soddi
                 var torrent = await Torrent.LoadAsync(torrentContents);
                 foreach (var torrentFile in torrent.Files)
                 {
-                    if (torrentFile.Path != archiveUrl.LongName + ".7z" &&
-                        torrentFile.Path.Contains(request.Archive + "-") == false)
+                    if (!potentialArchives.Contains(torrentFile.Path))
                     {
                         torrentFile.Priority = Priority.DoNotDownload;
                     }
@@ -111,7 +123,7 @@ namespace Soddi
                 var manager = new TorrentManager(
                     torrent,
                     outputPath,
-                    new TorrentSettings(), string.Empty);
+                    new TorrentSettings() { MaximumConnections = 250 }, string.Empty);
 
                 await engine.Register(manager);
                 await engine.StartAll();
@@ -128,12 +140,10 @@ namespace Soddi
                     foreach (var torrentFile in manager.Torrent.Files.Where(i => i.Priority != Priority.DoNotDownload))
                     {
                         var progressTask = fileTasks[torrentFile.Path];
-                        progressTask.Description(
-                            $"{torrentFile.Path} - {torrentFile.BytesDownloaded.BytesToString()}/{torrentFile.Length.BytesToString()}");
                         progressTask.Increment(torrentFile.BytesDownloaded - progressTask.Value);
                     }
 
-                    Thread.Sleep(100);
+                    await Task.Delay(100, cancellationToken);
                 }
 
                 await manager.StopAsync();

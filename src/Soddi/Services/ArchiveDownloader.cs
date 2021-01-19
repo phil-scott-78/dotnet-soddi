@@ -32,7 +32,7 @@ namespace Soddi.Services
 
             await using var contentStream = await response.Content.ReadAsStreamAsync();
 
-            var allReadsInKb = (int)(response.Content.Headers.ContentLength / 1024 ?? 0);
+            var allReadsInBytes = (int)(response.Content.Headers.ContentLength ?? 0);
 
             const int BufferSize = 1024 * 1024;
 
@@ -54,12 +54,12 @@ namespace Soddi.Services
                         .WriteAsync(buffer.AsMemory(0, read), cancellationToken)
                         .ConfigureAwait(false);
 
-                    _progress.Report((read / 1024, allReadsInKb));
+                    _progress.Report((read, allReadsInBytes));
                 }
                 else
                 {
                     isMoreToRead = false;
-                    _progress.Report((allReadsInKb, allReadsInKb));
+                    _progress.Report((allReadsInBytes, allReadsInBytes));
                 }
             } while (isMoreToRead);
         }

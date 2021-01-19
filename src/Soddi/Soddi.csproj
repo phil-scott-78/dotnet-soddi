@@ -15,9 +15,9 @@
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
     </PackageReference>
     <PackageReference Include="Scrutor" Version="3.3.0" />
-    <PackageReference Include="SharpCompress" Version="0.26.0" />
+    <PackageReference Include="SharpCompress" Version="0.27.1" />
     <PackageReference Include="Spectre.Cli.Extensions.DependencyInjection" Version="0.3.0" />
-    <PackageReference Include="Spectre.Console" Version="0.37.0" />
+    <PackageReference Include="Spectre.Console" Version="0.37.1-preview.0.9" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.2" />
     <PackageReference Include="System.IO.Abstractions" Version="13.2.8" />
   </ItemGroup>
@@ -29,6 +29,13 @@
 
     <PackageOutputPath>./nupkg</PackageOutputPath>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
+    <Version>0.1.2</Version>
+    <Authors>Phil Scott</Authors>
+    <Company />
+    <Description>Tool to help download and import Stack Overflow archives into SQL Server</Description>
+    <PackageProjectUrl>https://github.com/phil-scott-78/dotnet-soddi</PackageProjectUrl>
+    <RepositoryUrl>https://github.com/phil-scott-78/dotnet-soddi</RepositoryUrl>
+    <PackageLicenseExpression>MIT</PackageLicenseExpression>
   </PropertyGroup>
 
 </Project>
