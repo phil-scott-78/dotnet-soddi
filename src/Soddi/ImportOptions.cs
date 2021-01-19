@@ -2,10 +2,12 @@
 using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO.Abstractions;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Humanizer;
 using JetBrains.Annotations;
 using Soddi.Services;
 using Soddi.Tasks;
@@ -134,6 +136,8 @@ namespace Soddi
                 });
 
 
+            var stopWatch = Stopwatch.StartNew();
+
             progressBar.Start(ctx =>
             {
                 foreach (var (description, task) in tasks)
@@ -157,6 +161,9 @@ namespace Soddi
                     }
                 }
             });
+
+            stopWatch.Stop();
+            AnsiConsole.MarkupLine($"Import complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
 
             return 0;
         }

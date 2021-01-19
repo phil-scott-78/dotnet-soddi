@@ -1,10 +1,12 @@
 ﻿using System;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO.Abstractions;
 using System.Linq;
 using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
+using Humanizer;
 using JetBrains.Annotations;
 using MonoTorrent;
 using MonoTorrent.Client;
@@ -91,6 +93,8 @@ namespace Soddi
                 $"{archiveUrl.LongName}-Votes.7z"
             };
 
+            var stopWatch = Stopwatch.StartNew();
+
             await progressBar.StartAsync(async ctx =>
             {
                 AnsiConsole.WriteLine("Loading torrent...");
@@ -101,6 +105,7 @@ namespace Soddi
                 {
                     AllowedEncryption = EncryptionTypes.All, SavePath = outputPath, MaximumHalfOpenConnections = 16
                 };
+
 
                 AnsiConsole.WriteLine("Initializing BitTorrent engine...");
                 var engine = new ClientEngine(settings);
@@ -166,7 +171,8 @@ namespace Soddi
                 }
             });
 
-            AnsiConsole.WriteLine("Download complete");
+            stopWatch.Stop();
+            AnsiConsole.MarkupLine($"Download complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
             return await Task.FromResult(0);
         }
     }

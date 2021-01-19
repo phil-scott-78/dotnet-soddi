@@ -1,10 +1,12 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.IO.Abstractions;
 using System.Linq;
 using System.Threading;
 using System.Threading.Tasks;
+using Humanizer;
 using JetBrains.Annotations;
 using Soddi.Services;
 using Spectre.Console;
@@ -64,6 +66,8 @@ namespace Soddi
             var archiveUrl =
                 await availableArchiveParser.FindOrPickArchive(request.Archive, request.Pick, cancellationToken);
 
+            var stopWatch = Stopwatch.StartNew();
+            
             await AnsiConsole.Progress()
                 .AutoClear(false)
                 .Columns(new ProgressColumn[]
@@ -97,6 +101,11 @@ namespace Soddi
                     }
                 });
 
+            
+            stopWatch.Stop();
+            AnsiConsole.MarkupLine($"Download complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
+
+            
             return await Task.FromResult(0);
         }
     }
