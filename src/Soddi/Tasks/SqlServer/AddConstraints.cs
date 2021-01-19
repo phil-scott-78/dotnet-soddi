@@ -12,20 +12,24 @@ namespace Soddi.Tasks.SqlServer
             _connectionString = connectionString;
         }
 
-        public void Go(IProgress<(string message, int weight)> progress)
+        public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
         {
+            progress.Report(("add-constraints", "Adding constraints", 0, GetTaskWeight()));
             var statements = Sql.Split("GO");
             using var sqlConn = new SqlConnection(_connectionString);
             sqlConn.Open();
 
+
+            var taskIncrement = GetTaskWeight() / statements.Length;
             foreach (var statement in statements)
             {
+                progress.Report(("add-constraints", "Adding constraints", taskIncrement, GetTaskWeight()));
                 using var command = new SqlCommand(statement, sqlConn) { CommandTimeout = 3600 };
                 command.ExecuteNonQuery();
             }
         }
 
-        public int GetTaskWeight()
+        public double GetTaskWeight()
         {
             return 10000;
         }

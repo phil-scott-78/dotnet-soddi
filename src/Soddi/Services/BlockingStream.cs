@@ -26,6 +26,8 @@ namespace Soddi.Services
         public override long Length { get { throw new NotSupportedException(); } }
         public override void Flush() { }
         public long TotalBytesWritten { get; private set; }
+        public int TotalBytesRead { get; set; }
+
         public int WriteCount { get; private set; }
 
         public override long Position
@@ -65,13 +67,18 @@ namespace Soddi.Services
                     }
 
                     if (bytesRead == count)
+                    {
+                        TotalBytesRead += bytesRead;
+
                         return bytesRead;
+                    }
                 }
 
                 if (!_blocks.TryTake(out _currentBlock, Timeout.Infinite))
                     return bytesRead;
             }
         }
+
 
         public override void Write(byte[] buffer, int offset, int count)
         {

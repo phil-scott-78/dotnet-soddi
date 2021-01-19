@@ -15,7 +15,7 @@ namespace Soddi.Tasks.SqlServer
             _includePostTags = includePostTags;
         }
 
-        public void Go(IProgress<(string message, int weight)> progress)
+        public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
         {
             CheckIfAlreadyExists();
 
@@ -29,7 +29,7 @@ namespace Soddi.Tasks.SqlServer
             {
                 using var command = new SqlCommand(statement, sqlConn);
                 command.ExecuteNonQuery();
-                progress.Report(("Creating objects", incrementValue));
+                progress.Report(("createSchema", "Creating objects", incrementValue, GetTaskWeight()));
             }
         }
 
@@ -58,7 +58,7 @@ namespace Soddi.Tasks.SqlServer
             }
         }
 
-        public int GetTaskWeight()
+        public double GetTaskWeight()
         {
             return 10000;
         }

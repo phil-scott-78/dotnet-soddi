@@ -14,13 +14,14 @@ namespace Soddi.Tasks.SqlServer
             _databaseName = databaseName;
         }
 
-        public void Go(IProgress<(string message, int weight)> progress)
+        public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
         {
             var sql = $"select COUNT(*) from sys.databases where name = '{_databaseName}'";
             using var sqlConn = new SqlConnection(_connectionString);
             using var sqlCommand = new SqlCommand(sql, sqlConn);
 
             sqlConn.Open();
+            progress.Report(("createDb", "Creating database", GetTaskWeight() / 2, GetTaskWeight()));
             var result = (int)sqlCommand.ExecuteScalar();
             if (result == 0)
             {
@@ -29,7 +30,7 @@ namespace Soddi.Tasks.SqlServer
             }
         }
 
-        public int GetTaskWeight()
+        public double GetTaskWeight()
         {
             return 100;
         }
@@ -46,23 +47,22 @@ namespace Soddi.Tasks.SqlServer
             _databaseName = databaseName;
         }
 
-        public void Go(IProgress<(string message, int weight)> progress)
+        public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
         {
             var statements = Sql.Replace("DummyDatabaseName", _databaseName).Split("GO");
             using var sqlConn = new SqlConnection(_connectionString);
             sqlConn.Open();
 
-
             var incrementValue = GetTaskWeight() / statements.Length;
             foreach (var statement in statements)
             {
-                progress.Report(("Creating database", incrementValue));
+                progress.Report(("createDb", "Creating database", incrementValue, GetTaskWeight()));
                 using var command = new SqlCommand(statement, sqlConn);
                 command.ExecuteNonQuery();
             }
         }
 
-        public int GetTaskWeight()
+        public double GetTaskWeight()
         {
             return 10000;
         }

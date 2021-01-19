@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.ComponentModel;
 using System.IO.Abstractions;
@@ -43,6 +44,10 @@ namespace Soddi
         [CommandOption("--skipTags")]
         [Description("Skip adding PostTags table.")]
         public bool SkipTags { get; set; }
+
+        [CommandOption("--blockSize")]
+        [Description("Advanced. Block size used for concurrent read/write of 7z archives.")]
+        public int BlockSize { get; set; } = 1024;
 
         public static readonly string[][] Examples =
         {
@@ -117,32 +122,39 @@ namespace Soddi
 
             tasks.Enqueue(("Insert type values", new InsertTypeValues(databaseConnectionString)));
             tasks.Enqueue(("Insert data from archive",
-                new InsertData(databaseConnectionString, dbName, processor, !request.SkipTags)));
+                new InsertData(databaseConnectionString, dbName, processor, !request.SkipTags, request.BlockSize)));
 
             var progressBar = AnsiConsole.Progress()
                 .AutoClear(false)
                 .Columns(new ProgressColumn[]
                 {
-                    new SpinnerColumn() { CompletedText = Emoji.Known.CheckMark },
+                    new SpinnerColumn { CompletedText = Emoji.Known.CheckMark },
                     new FixedTaskDescriptionColumn(40), new ProgressBarColumn(), new PercentageColumn(),
                     new RemainingTimeColumn(),
                 });
+
 
             progressBar.Start(ctx =>
             {
                 foreach (var (description, task) in tasks)
                 {
-                    var progressBarTask = ctx.AddTask(description);
-                    progressBarTask.MaxValue(task.GetTaskWeight());
-                    var progress = new Progress<(string message, int weight)>(i =>
+                    var progressTasks = new ConcurrentDictionary<string, ProgressTask>();
+                    var progress = new Progress<(string taskId, string message, double weight, double maxValue)>(i =>
                     {
-                        var (message, weight) = i;
+                        var (taskId, message, weight, maxValue) = i;
+                        var progressBarTask = progressTasks.GetOrAdd(taskId, _ => ctx.AddTask(description));
+
+                        progressBarTask.MaxValue(maxValue);
                         progressBarTask.Increment(weight);
                         progressBarTask.Description(message);
                     });
 
                     task.Go(progress);
-                    progressBarTask.Increment(progressBarTask.MaxValue - progressBarTask.Value);
+
+                    foreach (var progressTask in progressTasks.Values)
+                    {
+                        progressTask.Increment(progressTask.MaxValue - progressTask.Value);
+                    }
                 }
             });
 

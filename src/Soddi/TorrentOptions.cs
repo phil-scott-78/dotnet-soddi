@@ -123,7 +123,7 @@ namespace Soddi
                 var manager = new TorrentManager(
                     torrent,
                     outputPath,
-                    new TorrentSettings() { MaximumConnections = 250 }, string.Empty);
+                    new TorrentSettings { MaximumConnections = 250 }, string.Empty);
 
                 await engine.Register(manager);
                 await engine.StartAll();

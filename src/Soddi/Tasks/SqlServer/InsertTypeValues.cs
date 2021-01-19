@@ -12,16 +12,17 @@ namespace Soddi.Tasks.SqlServer
             _connectionString = connectionString;
         }
 
-        public void Go(IProgress<(string message, int weight)> progress)
+        public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
         {
             using var sqlConn = new SqlConnection(_connectionString);
             using var command = new SqlCommand(Sql, sqlConn);
 
             sqlConn.Open();
+            progress.Report(("insertValues", "Inserting type values", GetTaskWeight() / 2, GetTaskWeight()));
             command.ExecuteNonQuery();
         }
 
-        public int GetTaskWeight()
+        public double GetTaskWeight()
         {
             return 50000;
         }

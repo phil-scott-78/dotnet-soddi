@@ -12,11 +12,12 @@ namespace Soddi.Tasks.SqlServer
         private readonly string _dbName;
         private readonly IArchivedDataProcessor _processor;
         private readonly bool _includePostTags;
+        private readonly int _blockSize;
 
         // file size and rows from the aviation database to guess our way
         // to about how far we are through a file based on it's size and number of rows
         // we've read
-        private static readonly Dictionary<string, decimal> s_approxSizePerRow = new Dictionary<string, decimal>()
+        private static readonly Dictionary<string, double> s_approxSizePerRow = new()
         {
             { "badges.xml", 112 },
             { "comments.xml", 341 },
@@ -29,22 +30,24 @@ namespace Soddi.Tasks.SqlServer
         };
 
         public InsertData(string connectionString, string dbName, IArchivedDataProcessor processor,
-            bool includePostTags)
+            bool includePostTags, int blockSize = 1024)
         {
             _connectionString = connectionString;
             _dbName = dbName;
             _processor = processor;
             _includePostTags = includePostTags;
+            _blockSize = blockSize;
         }
 
-        public void Go(IProgress<(string message, int weight)> progress)
+        public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
         {
-            var weightPerByte = GetTaskWeight() / (decimal)_processor.GetTotalFileSize();
-
-            foreach (var (fileName, stream, _) in _processor.GetFiles())
+            // keep a list of the insertion tasks. we want to move on to reading
+            // as quick as possible as the backlog of inserts is taking care of
+            var insertTasks = new List<Task>();
+            foreach (var (fileName, stream, fileSize) in _processor.GetFiles())
             {
-                // ReSharper disable AccessToDisposedClosure
-                using var blockingStream = new BlockingStream(1024 * 1024 * 1024);
+                // the blocking stream will let us read and write simultaneously
+                var blockingStream = new BlockingStream(_blockSize);
                 var decrypt = Task.Factory.StartNew(() =>
                 {
                     stream.CopyTo(blockingStream);
@@ -59,8 +62,8 @@ namespace Soddi.Tasks.SqlServer
                     {
                         var diff = l - totalBatchCount;
                         totalBatchCount = l;
-                        var min = diff * sizePerRow * weightPerByte;
-                        progress.Report(($"{fileName} ({l} rows read)", (int)min));
+                        var min = diff * sizePerRow;
+                        progress.Report((fileName, $"{fileName} ({l} rows read)", min, fileSize));
                     });
 
                     var isPostFile = fileName.Equals("posts.xml", StringComparison.InvariantCultureIgnoreCase);
@@ -93,16 +96,23 @@ namespace Soddi.Tasks.SqlServer
                     // then wait for it to complete
                     postTagDataReader?.Close();
                     postTagTask?.Wait();
+
+                    // up until this point we've been guessing at the total size
+                    // of the import so go ahead and nudge it to 100%
+                    progress.Report((fileName, fileName, fileSize, fileSize));
                 });
 
-
-                Task.WaitAll(decrypt, insert);
-
-                // ReSharper restore AccessToDisposedClosure
+                // add the insertion task to be completed in the background, but make sure
+                // we wait for decryption to complete before moving on because the 7z files
+                // can't be decrypted in parallel
+                insertTasks.Add(insert);
+                decrypt.Wait();
             }
+
+            Task.WaitAll(insertTasks.ToArray());
         }
 
-        public int GetTaskWeight()
+        public double GetTaskWeight()
         {
             return 1_000_000;
         }

@@ -12,8 +12,8 @@ Console.OutputEncoding = Encoding.UTF8;
 // args = new[] { "list" };
 // args = new[] { "download", "sp", "-p" };
 // args = new[] { "torrent", "stack", "-p" };
-args = new[] { "torrent", "iota" };
-// args = new[] { "import", @"iota.stackexchange.com.7z", "--dropAndCreate" };
+// args = new[] { "torrent", "iota" };
+args = new[] { "import", @"sports.stackexchange.com.7z", "--dropAndCreate" };
 // args = new[] { "list", "-h" };
 #endif
 
@@ -29,6 +29,11 @@ args = new[] { "torrent", "iota" };
         config =>
         {
             config.SetApplicationName("soddi");
+
+#if DEBUG
+            config.Settings.PropagateExceptions = true;
+#endif
+
             config.AddCommandWithExample<ImportHandler>("import", ImportOptions.Examples);
             config.AddCommandWithExample<ListHandler>("list", ListOptions.Examples);
             config.AddCommandWithExample<DownloadHandler>("download", DownloadOptions.Examples);

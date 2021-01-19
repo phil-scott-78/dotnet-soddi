@@ -17,7 +17,7 @@ namespace Soddi.Tests
         [Fact]
         public void Missing_path_throws_exception()
         {
-            var mockFileSystem = new MockFileSystem(new Dictionary<string, MockFileData>()
+            var mockFileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
             {
                 { "archive.7z", new MockFileData("") }
             });
@@ -32,7 +32,7 @@ namespace Soddi.Tests
         [Fact]
         public void Archive_processor_is_created_for_7z_file()
         {
-            var mockFileSystem = new MockFileSystem(new Dictionary<string, MockFileData>()
+            var mockFileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
             {
                 { "archive.7z", new MockFileData("") }
             });
@@ -45,7 +45,7 @@ namespace Soddi.Tests
         [Fact]
         public void Non_7z_files_throw_exceptions()
         {
-            var mockFileSystem = new MockFileSystem(new Dictionary<string, MockFileData>()
+            var mockFileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
             {
                 { "archive.zip", new MockFileData("") }
             });
