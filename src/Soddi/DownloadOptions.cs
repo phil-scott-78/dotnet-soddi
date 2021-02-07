@@ -8,6 +8,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Humanizer;
 using JetBrains.Annotations;
+using Soddi.ProgressBar;
 using Soddi.Services;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -67,14 +68,15 @@ namespace Soddi
                 await availableArchiveParser.FindOrPickArchive(request.Archive, request.Pick, cancellationToken);
 
             var stopWatch = Stopwatch.StartNew();
-            
+
             await AnsiConsole.Progress()
                 .AutoClear(false)
                 .Columns(new ProgressColumn[]
                 {
                     new SpinnerColumn { CompletedText = Emoji.Known.CheckMark }, new DownloadedColumn(),
-                    new FixedTaskDescriptionColumn(Math.Clamp(AnsiConsole.Width, 40, 65)), new ProgressBarColumn(),
-                    new PercentageColumn(), new TransferSpeedColumn(), new RemainingTimeColumn(),
+                    new FixedTaskDescriptionColumn(Math.Clamp(AnsiConsole.Console.Profile.Width, 40, 65)),
+                    new ProgressBarColumn(), new PercentageColumn(), new TransferSpeedColumn(),
+                    new RemainingTimeColumn(),
                 }).StartAsync(async ctx =>
                 {
                     List<(ProgressTask Task, Archive.UriWithSize UriWithSize)> tasks = archiveUrl.Uris
@@ -101,11 +103,11 @@ namespace Soddi
                     }
                 });
 
-            
+
             stopWatch.Stop();
             AnsiConsole.MarkupLine($"Download complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
 
-            
+
             return await Task.FromResult(0);
         }
     }

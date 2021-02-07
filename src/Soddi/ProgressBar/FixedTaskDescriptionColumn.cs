@@ -2,7 +2,7 @@
 using Spectre.Console;
 using Spectre.Console.Rendering;
 
-namespace Soddi
+namespace Soddi.ProgressBar
 {
     public sealed class FixedTaskDescriptionColumn : ProgressColumn
     {

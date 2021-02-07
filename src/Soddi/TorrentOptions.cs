@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO.Abstractions;
@@ -10,6 +11,7 @@ using Humanizer;
 using JetBrains.Annotations;
 using MonoTorrent;
 using MonoTorrent.Client;
+using Soddi.ProgressBar;
 using Soddi.Services;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -74,7 +76,7 @@ namespace Soddi
                 .Columns(new ProgressColumn[]
                 {
                     new SpinnerColumn { CompletedText = Emoji.Known.CheckMark }, new DownloadedColumn(),
-                    new FixedTaskDescriptionColumn(Math.Clamp(AnsiConsole.Width, 40, 65)), new ProgressBarColumn(),
+                    new FixedTaskDescriptionColumn(Math.Clamp(AnsiConsole.Console.Profile.Width, 40, 65)), new TorrentProgressBarColumn(),
                     new PercentageColumn(), new TransferSpeedColumn(), new RemainingTimeColumn()
                 });
 
@@ -146,6 +148,7 @@ namespace Soddi
                     {
                         var progressTask = fileTasks[torrentFile.Path];
                         progressTask.Increment(torrentFile.BytesDownloaded - progressTask.Value);
+                        progressTask.State.Update<BitSmuggler>("torrentBits", _ => new BitSmuggler(torrentFile.BitField));
                     }
 
                     await Task.Delay(100, cancellationToken);

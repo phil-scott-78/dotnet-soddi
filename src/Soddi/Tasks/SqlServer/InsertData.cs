@@ -1,5 +1,7 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.Data;
 using System.Threading.Tasks;
 using Soddi.Services;
@@ -12,6 +14,7 @@ namespace Soddi.Tasks.SqlServer
         private readonly string _dbName;
         private readonly IArchivedDataProcessor _processor;
         private readonly bool _includePostTags;
+        private readonly Action<ImmutableDictionary<string, long>> _summaryReporter;
         private readonly int _blockSize;
 
         // file size and rows from the aviation database to guess our way
@@ -30,12 +33,13 @@ namespace Soddi.Tasks.SqlServer
         };
 
         public InsertData(string connectionString, string dbName, IArchivedDataProcessor processor,
-            bool includePostTags, int blockSize = 1024)
+            bool includePostTags, Action<ImmutableDictionary<string, long>> summaryReporter, int blockSize = 1024)
         {
             _connectionString = connectionString;
             _dbName = dbName;
             _processor = processor;
             _includePostTags = includePostTags;
+            _summaryReporter = summaryReporter;
             _blockSize = blockSize;
         }
 
@@ -44,6 +48,7 @@ namespace Soddi.Tasks.SqlServer
             // keep a list of the insertion tasks. we want to move on to reading
             // as quick as possible as the backlog of inserts is taking care of
             var insertTasks = new List<Task>();
+            var fileReport = new ConcurrentDictionary<string, long>();
             foreach (var (fileName, stream, fileSize) in _processor.GetFiles())
             {
                 // the blocking stream will let us read and write simultaneously
@@ -63,6 +68,7 @@ namespace Soddi.Tasks.SqlServer
                         var diff = l - totalBatchCount;
                         totalBatchCount = l;
                         var min = diff * sizePerRow;
+                        fileReport.AddOrUpdate(fileName, _ => l, (_, _) => l);
                         progress.Report((fileName, $"{fileName} ({l} rows read)", min, fileSize));
                     });
 
@@ -109,6 +115,7 @@ namespace Soddi.Tasks.SqlServer
                 decrypt.Wait();
             }
 
+            _summaryReporter(fileReport.ToImmutableDictionary());
             Task.WaitAll(insertTasks.ToArray());
         }
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Collections.Immutable;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO.Abstractions;
@@ -9,6 +10,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using Humanizer;
 using JetBrains.Annotations;
+using Soddi.ProgressBar;
 using Soddi.Services;
 using Soddi.Tasks;
 using Soddi.Tasks.SqlServer;
@@ -105,6 +107,8 @@ namespace Soddi
             var (masterConnectionString, databaseConnectionString) =
                 _databaseHelper.GetMasterAndDbConnectionStrings(request.ConnectionString, dbName);
 
+            ImmutableDictionary<string, long>? insertReport = null;
+
             var processor = _processorFactory.VerifyAndCreateProcessor(requestPath);
 
             if (request.DropAndRecreate)
@@ -124,15 +128,20 @@ namespace Soddi
 
             tasks.Enqueue(("Insert type values", new InsertTypeValues(databaseConnectionString)));
             tasks.Enqueue(("Insert data from archive",
-                new InsertData(databaseConnectionString, dbName, processor, !request.SkipTags, request.BlockSize)));
+                new InsertData(
+                    databaseConnectionString,
+                    dbName,
+                    processor,
+                    !request.SkipTags,
+                    d => insertReport = d,
+                    request.BlockSize)));
 
             var progressBar = AnsiConsole.Progress()
                 .AutoClear(false)
                 .Columns(new ProgressColumn[]
                 {
-                    new SpinnerColumn { CompletedText = Emoji.Known.CheckMark },
-                    new FixedTaskDescriptionColumn(40), new ProgressBarColumn(), new PercentageColumn(),
-                    new RemainingTimeColumn(),
+                    new SpinnerColumn { CompletedText = Emoji.Known.CheckMark }, new FixedTaskDescriptionColumn(40),
+                    new ProgressBarColumn(), new PercentageColumn(), new RemainingTimeColumn(),
                 });
 
 
@@ -163,6 +172,23 @@ namespace Soddi
             });
 
             stopWatch.Stop();
+
+            if (insertReport != null)
+            {
+                var counter = 1;
+                var chart = new BreakdownChart()
+                    .Compact()
+                    .Width(60)
+                    .FullSize()
+                    .AddItems(insertReport,
+                        pair => new BreakdownChartItem(pair.Key, pair.Value, counter++)
+                    );
+
+                AnsiConsole.MarkupLine("[blue]Rows inserted[/]");
+                AnsiConsole.Render(chart);
+            }
+
+            AnsiConsole.WriteLine();
             AnsiConsole.MarkupLine($"Import complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
 
             return 0;
