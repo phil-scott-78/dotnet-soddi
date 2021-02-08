@@ -18,7 +18,7 @@
     <PackageReference Include="Scrutor" Version="3.3.0" />
     <PackageReference Include="SharpCompress" Version="0.27.1" />
     <PackageReference Include="Spectre.Cli.Extensions.DependencyInjection" Version="0.3.0" />
-    <PackageReference Include="Spectre.Console" Version="0.37.1-preview.0.17" />
+    <PackageReference Include="Spectre.Console" Version="0.37.1-preview.0.18" />
     <PackageReference Include="System.Data.SqlClient" Version="4.8.2" />
     <PackageReference Include="System.IO.Abstractions" Version="13.2.8" />
   </ItemGroup>

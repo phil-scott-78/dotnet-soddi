@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections;
+﻿using System.Collections.Generic;
 using System.ComponentModel;
 using System.Diagnostics;
 using System.IO.Abstractions;
@@ -76,24 +75,29 @@ namespace Soddi
                 .Columns(new ProgressColumn[]
                 {
                     new SpinnerColumn { CompletedText = Emoji.Known.CheckMark }, new DownloadedColumn(),
-                    new FixedTaskDescriptionColumn(Math.Clamp(AnsiConsole.Console.Profile.Width, 40, 65)), new TorrentProgressBarColumn(),
-                    new PercentageColumn(), new TransferSpeedColumn(), new RemainingTimeColumn()
+                    new TaskDescriptionColumn(), new TorrentProgressBarColumn(), new PercentageColumn(),
+                    new TransferSpeedColumn(), new RemainingTimeColumn()
                 });
 
             AnsiConsole.WriteLine("Finding archive files...");
 
             var availableArchiveParser = new AvailableArchiveParser();
-            var archiveUrl =
+            var archiveUrls =
                 await availableArchiveParser.FindOrPickArchive(request.Archive, request.Pick, cancellationToken);
 
-            var potentialArchives = new[]
+
+            var potentialArchives = new List<string>();
+            foreach (var archiveUrl in archiveUrls)
             {
-                archiveUrl.LongName + ".7z", $"{archiveUrl.LongName}-Badges.7z",
-                $"{archiveUrl.LongName}-Comments.7z", $"{archiveUrl.LongName}-PostHistory.7z",
-                $"{archiveUrl.LongName}-PostLinks.7z", $"{archiveUrl.LongName}-Posts.7z",
-                $"{archiveUrl.LongName}-Tags.7z", $"{archiveUrl.LongName}-Users.7z",
-                $"{archiveUrl.LongName}-Votes.7z"
-            };
+                potentialArchives.AddRange(new[]
+                {
+                    archiveUrl.LongName + ".7z", $"{archiveUrl.LongName}-Badges.7z",
+                    $"{archiveUrl.LongName}-Comments.7z", $"{archiveUrl.LongName}-PostHistory.7z",
+                    $"{archiveUrl.LongName}-PostLinks.7z", $"{archiveUrl.LongName}-Posts.7z",
+                    $"{archiveUrl.LongName}-Tags.7z", $"{archiveUrl.LongName}-Users.7z",
+                    $"{archiveUrl.LongName}-Votes.7z"
+                });
+            }
 
             var stopWatch = Stopwatch.StartNew();
 
@@ -148,7 +152,8 @@ namespace Soddi
                     {
                         var progressTask = fileTasks[torrentFile.Path];
                         progressTask.Increment(torrentFile.BytesDownloaded - progressTask.Value);
-                        progressTask.State.Update<BitSmuggler>("torrentBits", _ => new BitSmuggler(torrentFile.BitField));
+                        progressTask.State.Update<BitSmuggler>("torrentBits",
+                            _ => new BitSmuggler(torrentFile.BitField));
                     }
 
                     await Task.Delay(100, cancellationToken);

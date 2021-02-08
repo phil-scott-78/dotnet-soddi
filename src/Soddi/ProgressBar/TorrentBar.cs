@@ -1,8 +1,10 @@
 ﻿using System;
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using MonoTorrent;
 using Soddi.Services;
+using Spectre.Console;
 using Spectre.Console.Rendering;
 
 namespace Soddi.ProgressBar
@@ -28,7 +30,18 @@ namespace Soddi.ProgressBar
         {
             var width = Math.Min(Width ?? maxWidth, maxWidth);
 
-            return _bits.Length >= width ? SmushTheBitsRender(context, width) : ExpandTheBitsRender(context, width);
+            IEnumerable<Segment> segments;
+            if (_bits.Length >= width)
+            {
+                segments = SmushTheBitsRender(context, width);
+            }
+            else
+            {
+                segments = ExpandTheBitsRender(context, width);
+            }
+
+            var list = segments.ToList();
+            return list;
         }
 
         private IEnumerable<Segment> ExpandTheBitsRender(RenderContext context, int maxWidth)
@@ -37,6 +50,8 @@ namespace Soddi.ProgressBar
             var segment = new bool[8];
             var segmentPos = 0;
 
+
+            var segmentsRendered = 0;
             foreach (var bit in _bits)
             {
                 for (var i = 0; i < dotsPerSegment; i++)
@@ -46,24 +61,33 @@ namespace Soddi.ProgressBar
 
                     if (segmentPos == 8)
                     {
-                        yield return RenderChunk(segment);
-
+                        segmentsRendered++;
                         segmentPos = 0;
+                        yield return RenderChunk(segment, context.LegacyConsole);
                     }
+                }
+            }
+
+            if (segmentsRendered < maxWidth)
+            {
+                for (var i = segmentsRendered; i < maxWidth; i++)
+                {
+                    yield return RenderChunk(segment, context.LegacyConsole);
                 }
             }
         }
 
         private IEnumerable<Segment> SmushTheBitsRender(RenderContext context, int maxWidth)
         {
-            var bitsPerSegment = _bits.Length / (maxWidth * 8);
+            var bitsPerSegment = (int)Math.Round((decimal)_bits.Length / 8 / maxWidth);
             if (bitsPerSegment == 0)
                 bitsPerSegment = 1;
-            
+
             var segment = new bool[8];
             var segmentPos = 0;
             var bitPos = 0;
-            while (bitPos < _bits.Length)
+            var segmentsRendered = 0;
+            while (bitPos + bitsPerSegment <= _bits.Length)
             {
                 var bitAverage = 0;
                 for (var i = 0; i < bitsPerSegment; i++)
@@ -78,15 +102,30 @@ namespace Soddi.ProgressBar
                 if (segmentPos == 8)
                 {
                     segmentPos = 0;
+                    segmentsRendered++;
+                    yield return RenderChunk(segment, context.LegacyConsole);
+                }
+            }
 
-                    yield return RenderChunk(segment);
+            if (segmentsRendered < maxWidth)
+            {
+                for (var i = segmentsRendered; i < maxWidth; i++)
+                {
+                    yield return RenderChunk(segment, context.LegacyConsole);
                 }
             }
         }
 
-        private Segment RenderChunk(bool[] chunk)
+        private Segment RenderChunk(bool[] chunk, bool legacyConsole)
         {
-            return new(DotPattern.Get(new BitArray(chunk)).ToString());
+            var style = Style.Plain;
+            if (chunk.All(i => i == true))
+            {
+                style = new Style(foreground: Color.Green);
+            }
+
+            var segment = new Segment(DotPattern.Get(new BitArray(chunk)).ToString(), style);
+            return segment;
         }
     }
 }

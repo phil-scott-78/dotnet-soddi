@@ -8,7 +8,6 @@ using System.Threading;
 using System.Threading.Tasks;
 using Humanizer;
 using JetBrains.Annotations;
-using Soddi.ProgressBar;
 using Soddi.Services;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -74,14 +73,17 @@ namespace Soddi
                 .Columns(new ProgressColumn[]
                 {
                     new SpinnerColumn { CompletedText = Emoji.Known.CheckMark }, new DownloadedColumn(),
-                    new FixedTaskDescriptionColumn(Math.Clamp(AnsiConsole.Console.Profile.Width, 40, 65)),
-                    new ProgressBarColumn(), new PercentageColumn(), new TransferSpeedColumn(),
-                    new RemainingTimeColumn(),
+                    new TaskDescriptionColumn(), new ProgressBarColumn(), new PercentageColumn(),
+                    new TransferSpeedColumn(), new RemainingTimeColumn(),
                 }).StartAsync(async ctx =>
                 {
-                    List<(ProgressTask Task, Archive.UriWithSize UriWithSize)> tasks = archiveUrl.Uris
-                        .Select(uriWithSize => (ctx.AddTask(uriWithSize.Description(false)), uriWithSize))
-                        .ToList();
+                    var tasks = new List<(ProgressTask Task, Archive.UriWithSize UriWithSize)>();
+                    foreach (var archive in archiveUrl)
+                    {
+                        tasks.AddRange(archive.Uris
+                            .Select(uriWithSize => (ctx.AddTask(uriWithSize.Description(false)), uriWithSize))
+                            .ToList());
+                    }
 
                     while (!ctx.IsFinished)
                     {

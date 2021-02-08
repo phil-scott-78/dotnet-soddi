@@ -94,32 +94,41 @@ namespace Soddi.Services
                     archive.uris));
         }
 
-        public async Task<Archive> FindOrPickArchive(string archive, bool canUserPick,
+        public async Task<List<Archive>> FindOrPickArchive(string archiveItems, bool canUserPick,
             CancellationToken cancellationToken)
         {
+            var archives = archiveItems.Split(',', ';');
             var parser = new AvailableArchiveParser();
             var results = (await parser.Get(cancellationToken)).ToList();
-            var archiveUrl = results
-                .FirstOrDefault(i => i.ShortName == archive ||
-                                     i.LongName == archive ||
-                                     i.ShortName.Contains($"{archive}-"));
 
-            if (archiveUrl != null)
+            var archivesToDownload = new List<Archive>();
+            foreach (var archive in archives)
             {
-                return archiveUrl;
+                var archiveUrl = results
+                    .FirstOrDefault(i => i.ShortName == archive ||
+                                         i.LongName == archive ||
+                                         i.ShortName.Contains($"{archive}-"));
+
+                if (archiveUrl != null)
+                {
+                    archivesToDownload.Add(archiveUrl);
+                }
             }
+
+            if (archivesToDownload.Count > 0)
+                return archivesToDownload;
 
             if (canUserPick == false)
             {
-                throw new SoddiException($"Could not find archive named {archive}");
+                throw new SoddiException($"Could not find archive named {archiveItems}");
             }
 
             var filteredResults = results.Where(i =>
-                i.ShortName.Contains(archive, StringComparison.InvariantCultureIgnoreCase)).ToList();
+                i.ShortName.Contains(archiveItems, StringComparison.InvariantCultureIgnoreCase)).ToList();
 
             if (filteredResults.Any() == false)
             {
-                throw new SoddiException($"Could not find archive named {archive}");
+                throw new SoddiException($"Could not find archive named {archiveItems}");
             }
 
             var item = AnsiConsole.Prompt(
@@ -130,7 +139,9 @@ namespace Soddi.Services
                         .Where(i => i.ShortName.Contains("meta.", StringComparison.InvariantCultureIgnoreCase) == false)
                         .Select(ArchiveSelectionOption.FromArchive)));
 
-            return results.First(i => i.ShortName.Equals(item.ShortName, StringComparison.InvariantCultureIgnoreCase));
+            return results
+                .Where(i => i.ShortName.Equals(item.ShortName, StringComparison.InvariantCultureIgnoreCase))
+                .ToList();
         }
 
 
