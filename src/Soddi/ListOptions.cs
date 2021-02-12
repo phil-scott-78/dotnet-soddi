@@ -27,13 +27,21 @@ namespace Soddi
 
     public class ListHandler : AsyncCommand<ListOptions>
     {
+        private readonly IAnsiConsole _console;
+        private readonly AvailableArchiveParser _availableArchiveParser;
+
+        public ListHandler(IAnsiConsole console, AvailableArchiveParser availableArchiveParser)
+        {
+            _console = console;
+            _availableArchiveParser = availableArchiveParser;
+        }
+
         public override async Task<int> ExecuteAsync(CommandContext context, ListOptions request)
         {
             var cancellationToken = CancellationToken.None;
 
             var pattern = request.Pattern ?? "";
-            var parser = new AvailableArchiveParser();
-            var results = await parser.Get(cancellationToken);
+            var results = await _availableArchiveParser.Get(cancellationToken);
 
             var table = new Table { Border = TableBorder.Rounded, Expand = true };
             table.AddColumn(new TableColumn("Short Name"));
@@ -65,7 +73,7 @@ namespace Soddi
                 table.AddRow(new Markup($"[white]{archive.ShortName}[/]"), innerTable);
             }
 
-            AnsiConsole.Render(table);
+            _console.Render(table);
 
             return await Task.FromResult(0);
         }

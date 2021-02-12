@@ -46,10 +46,14 @@ namespace Soddi
     public class TorrentHandler : AsyncCommand<TorrentOptions>
     {
         private readonly IFileSystem _fileSystem;
+        private readonly IAnsiConsole _console;
+        private AvailableArchiveParser _availableArchiveParser;
 
-        public TorrentHandler(IFileSystem fileSystem)
+        public TorrentHandler(IFileSystem fileSystem, IAnsiConsole console, AvailableArchiveParser availableArchiveParser)
         {
             _fileSystem = fileSystem;
+            _console = console;
+            _availableArchiveParser = availableArchiveParser;
         }
 
         public override async Task<int> ExecuteAsync(CommandContext context, TorrentOptions request)
@@ -70,7 +74,7 @@ namespace Soddi
             var paddingFolder = _fileSystem.Path.Combine(outputPath, ".____padding_file");
             var doesPaddingFolderExistToStart = _fileSystem.Directory.Exists(paddingFolder);
 
-            var progressBar = AnsiConsole.Progress()
+            var progressBar = _console.Progress()
                 .AutoClear(false)
                 .Columns(new ProgressColumn[]
                 {
@@ -79,11 +83,10 @@ namespace Soddi
                     new TransferSpeedColumn(), new RemainingTimeColumn()
                 });
 
-            AnsiConsole.WriteLine("Finding archive files...");
+            _console.WriteLine("Finding archive files...");
 
-            var availableArchiveParser = new AvailableArchiveParser();
             var archiveUrls =
-                await availableArchiveParser.FindOrPickArchive(request.Archive, request.Pick, cancellationToken);
+                await _availableArchiveParser.FindOrPickArchive(request.Archive, request.Pick, cancellationToken);
 
 
             var potentialArchives = new List<string>();
@@ -103,7 +106,7 @@ namespace Soddi
 
             await progressBar.StartAsync(async ctx =>
             {
-                AnsiConsole.WriteLine("Loading torrent...");
+                _console.WriteLine("Loading torrent...");
                 const string Url = "https://archive.org/download/stackexchange/stackexchange_archive.torrent";
                 var httpClient = new HttpClient();
                 var torrentContents = await httpClient.GetByteArrayAsync(Url, cancellationToken);
@@ -113,12 +116,12 @@ namespace Soddi
                 };
 
 
-                AnsiConsole.WriteLine("Initializing BitTorrent engine...");
+                _console.WriteLine("Initializing BitTorrent engine...");
                 var engine = new ClientEngine(settings);
 
                 if (request.EnablePortForwarding)
                 {
-                    AnsiConsole.WriteLine("Attempting to forward ports");
+                    _console.WriteLine("Attempting to forward ports");
                     await engine.EnablePortForwardingAsync(cancellationToken);
                 }
 
@@ -180,7 +183,7 @@ namespace Soddi
             });
 
             stopWatch.Stop();
-            AnsiConsole.MarkupLine($"Download complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
+            _console.MarkupLine($"Download complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
             return await Task.FromResult(0);
         }
     }

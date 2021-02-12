@@ -40,10 +40,14 @@ namespace Soddi
     public class DownloadHandler : AsyncCommand<DownloadOptions>
     {
         private readonly IFileSystem _fileSystem;
+        private readonly IAnsiConsole _console;
+        private readonly AvailableArchiveParser _availableArchiveParser;
 
-        public DownloadHandler(IFileSystem fileSystem)
+        public DownloadHandler(IFileSystem fileSystem, IAnsiConsole console, AvailableArchiveParser availableArchiveParser)
         {
             _fileSystem = fileSystem;
+            _console = console;
+            _availableArchiveParser = availableArchiveParser;
         }
 
 
@@ -62,13 +66,12 @@ namespace Soddi
                 throw new SoddiException($"Output path {outputPath} not found");
             }
 
-            var availableArchiveParser = new AvailableArchiveParser();
             var archiveUrl =
-                await availableArchiveParser.FindOrPickArchive(request.Archive, request.Pick, cancellationToken);
+                await _availableArchiveParser.FindOrPickArchive(request.Archive, request.Pick, cancellationToken);
 
             var stopWatch = Stopwatch.StartNew();
 
-            await AnsiConsole.Progress()
+            await _console.Progress()
                 .AutoClear(false)
                 .Columns(new ProgressColumn[]
                 {
@@ -105,10 +108,8 @@ namespace Soddi
                     }
                 });
 
-
             stopWatch.Stop();
-            AnsiConsole.MarkupLine($"Download complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
-
+            _console.MarkupLine($"Download complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
 
             return await Task.FromResult(0);
         }

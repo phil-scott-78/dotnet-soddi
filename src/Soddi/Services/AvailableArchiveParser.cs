@@ -47,6 +47,13 @@ namespace Soddi.Services
 
     public class AvailableArchiveParser
     {
+        private readonly IAnsiConsole _console;
+
+        public AvailableArchiveParser(IAnsiConsole console)
+        {
+            _console = console;
+        }
+
         public async Task<IEnumerable<Archive>> Get(CancellationToken cancellationToken)
         {
             const string BaseUrl = "https://archive.org/download/stackexchange/";
@@ -98,8 +105,7 @@ namespace Soddi.Services
             CancellationToken cancellationToken)
         {
             var archives = archiveItems.Split(',', ';');
-            var parser = new AvailableArchiveParser();
-            var results = (await parser.Get(cancellationToken)).ToList();
+            var results = (await this.Get(cancellationToken)).ToList();
 
             var archivesToDownload = new List<Archive>();
             foreach (var archive in archives)
@@ -131,7 +137,7 @@ namespace Soddi.Services
                 throw new SoddiException($"Could not find archive named {archiveItems}");
             }
 
-            var item = AnsiConsole.Prompt(
+            var item = _console.Prompt(
                 new SelectionPrompt<ArchiveSelectionOption>()
                     .PageSize(10)
                     .Title("Pick an archive to download")

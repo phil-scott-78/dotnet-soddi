@@ -67,14 +67,16 @@ namespace Soddi
         private readonly DatabaseHelper _databaseHelper;
         private readonly ProcessorFactory _processorFactory;
         private readonly IFileSystem _fileSystem;
+        private readonly IAnsiConsole _console;
 
         public ImportHandler(DatabaseHelper databaseHelper, ProcessorFactory processorFactory, IFileSystem fileSystem,
-            AvailableArchiveParser availableArchiveParser)
+            AvailableArchiveParser availableArchiveParser, IAnsiConsole console)
         {
             _databaseHelper = databaseHelper;
             _processorFactory = processorFactory;
             _fileSystem = fileSystem;
             _availableArchiveParser = availableArchiveParser;
+            _console = console;
         }
 
         private async Task<string> CheckAndFixupPath(string path, CancellationToken token)
@@ -136,7 +138,7 @@ namespace Soddi
                     d => insertReport = d,
                     request.BlockSize)));
 
-            var progressBar = AnsiConsole.Progress()
+            var progressBar = _console.Progress()
                 .AutoClear(false)
                 .Columns(new ProgressColumn[]
                 {
@@ -184,12 +186,12 @@ namespace Soddi
                         pair => new BreakdownChartItem(pair.Key, pair.Value, counter++)
                     );
 
-                AnsiConsole.MarkupLine("[blue]Rows inserted[/]");
-                AnsiConsole.Render(chart);
+                _console.MarkupLine("[blue]Rows inserted[/]");
+                _console.Render(chart);
             }
 
-            AnsiConsole.WriteLine();
-            AnsiConsole.MarkupLine($"Import complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
+            _console.WriteLine();
+            _console.MarkupLine($"Import complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
 
             return 0;
         }
