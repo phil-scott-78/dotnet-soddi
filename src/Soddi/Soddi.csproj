@@ -30,7 +30,7 @@
 
     <PackageOutputPath>./nupkg</PackageOutputPath>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>0.1.2</Version>
+    <Version>0.1.3</Version>
     <Authors>Phil Scott</Authors>
     <Company />
     <Description>Tool to help download and import Stack Overflow archives into SQL Server</Description>
