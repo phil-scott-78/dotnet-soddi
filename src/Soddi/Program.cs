@@ -12,9 +12,9 @@ const bool propagateExceptions = true;
 // args = new[] { "import", @"C:\Users\phils\Downloads\aviation.stackexchange.com\", "--dropAndCreate" };
 // args = new[] { "list" };
 // args = new[] { "download", "sp", "-p" };
-args = new[] { "torrent", "codegolf", "-p" };
+//args = new[] { "torrent", "codegolf", "-p" };
 // args = new[] { "torrent", "math,space,sports,travel" };
-// args = new[] { "brent" };
+args = new[] { "brent" };
 //args = new[] { "import", @"sports.stackexchange.com.7z", "--dropAndCreate" };
 // args = new[] { "list", "-h" };
 #else

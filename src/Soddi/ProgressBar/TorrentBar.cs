@@ -61,7 +61,25 @@ namespace Soddi.ProgressBar
                 style = new Style(Color.Green);
             }
 
-            var segment = new Segment(DotPattern.Get(new BitArray(chunk.Select(i => i > .6m).ToArray())).ToString(), style);
+            const decimal MinimumValueToConsiderDownloaded = .5m;
+            if (chunk.All(i => i < MinimumValueToConsiderDownloaded) && chunk.Any(i => i > .1m))
+            {
+                // if we don't have any dots to display, but we do have a bit that is at least
+                // partial then display one little dot in grey
+                var first = true;
+                return new Segment(DotPattern.Get(new BitArray(chunk.Select(i =>
+                {
+                    if (i > .1m && first)
+                    {
+                        first = false;
+                        return true;
+                    }
+
+                    return false;
+                }).ToArray())).ToString(), new Style(Color.Grey));
+            }
+
+            var segment = new Segment(DotPattern.Get(new BitArray(chunk.Select(i => i > MinimumValueToConsiderDownloaded).ToArray())).ToString(), style);
             return segment;
         }
     }
