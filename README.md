@@ -1,5 +1,13 @@
 # DotNet-Soddi (Stack Overflow Data Dump Importer)
 
+## Install
+
+![Nuget (with prereleases)](https://img.shields.io/nuget/vpre/dotnet-soddi)
+
+```bash
+dotnet tool install --global dotnet-soddi --version 0.1.1
+```
+
 Inspirited by the original [Soddi](https://github.com/BrentOzarULTD/soddi), DotNet-Soddi is a console application 
 that assists in not just importing the Stack Overflow data dumps, but also obtaining them.
 
