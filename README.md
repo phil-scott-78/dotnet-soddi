@@ -8,8 +8,8 @@
 dotnet tool install --global dotnet-soddi --version 0.1.1
 ```
 
-Inspirited by the original [Soddi](https://github.com/BrentOzarULTD/soddi), DotNet-Soddi is a console application 
-that assists in not just importing the Stack Overflow data dumps, but also obtaining them.
+Inspirited by the original [Soddi](https://github.com/BrentOzarULTD/soddi), DotNet-Soddi is a console application that
+assists in not just importing the Stack Overflow data dumps, but also obtaining them.
 
 ## Features
 
@@ -27,17 +27,17 @@ Not all features of Soddi are supported.
 
 ## Download and install a database in two lines
 
-The following command will download the archive for the math.stackexchange.com, then import it into an existing 
-database named math.stackexchange.com
+The following command will download the archive for the math.stackexchange.com, then import it into an existing database
+named math.stackexchange.com
 
 ```bash
 soddi download math
 soddi import math -d math.stackexchange.com
 ```
 
-Because of the size of the database and the bandwidth of archive.org, you might be better off using the torrent 
-option. The following command will do everything required to connect to the appropriate trackers and peers to download
-the math database and exit upon completion.
+Because of the size of the database and the bandwidth of archive.org, you might be better off using the torrent option.
+The following command will do everything required to connect to the appropriate trackers and peers to download the math
+database and exit upon completion.
 
 ```bash
 soddi torrent math
@@ -119,7 +119,7 @@ Import data using defaults without constraints:
 
 ### `soddi torrent`
 
-Experimental. Download database via BitTorrent. For larger databases this might prove significantly faster.
+Download database via BitTorrent. For larger databases this might prove significantly faster.
 
 ```bash
 USAGE:
@@ -141,3 +141,30 @@ Pick from archives containing "stack":
   Archive (pos. 0)     Required. Archive to download
   ```
   
+### `soddi brent`
+
+Super experimental. Downloads and extracts one of the [BrentO provided databases](https://www.brentozar.com/archive/2015/10/how-to-download-the-stack-overflow-database-via-bittorrent/) via BitTorrent.
+
+If you don't supply an `ARCHIVE_NAME` you will be prompted for one.
+
+```bash
+USAGE:
+    soddi brent [ARCHIVE_NAME] [OPTIONS]
+
+EXAMPLES:
+    soddi brent
+    soddi brent small
+    soddi brent medium
+    soddi brent large
+    soddi brent extra-large
+
+ARGUMENTS:
+    [ARCHIVE_NAME]    Archive to download
+
+OPTIONS:
+    -h, --help              Prints help information
+    -o, --output            Output folder
+        --skipExtraction    Don't extract the downloaded 7z files
+    -f, --portForward       Experimental. Enable port forwarding
+
+```
