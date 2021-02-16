@@ -5,7 +5,7 @@ using System.Collections.Immutable;
 
 namespace Soddi.Services
 {
-    public static partial class DotPattern
+    public static class DotPattern
     {
         /// <summary>
         /// Returns a braille pattern matching the specified dots depending on which characters
@@ -20,7 +20,7 @@ namespace Soddi.Services
         /// <returns></returns>
         public static char Get(string pattern)
         {
-            return Dots[pattern];
+            return s_dots[pattern];
         }
 
         public static char Get(bool[,] pattern)
@@ -61,7 +61,7 @@ namespace Soddi.Services
                 }
             }
 
-            return Dots[s];
+            return s_dots[s];
         }
 
         /// <summary>
@@ -76,7 +76,7 @@ namespace Soddi.Services
         /// <returns></returns>
         public static char Get(byte pattern)
         {
-            return Get(new BitArray(new[] {pattern}));
+            return Get(new BitArray(new[] { pattern }));
         }
 
         /// <summary>
@@ -98,10 +98,10 @@ namespace Soddi.Services
         /// <returns></returns>
         public static char Get(bool one, bool two, bool three, bool four, bool five, bool six, bool seven, bool eight)
         {
-            return Get(new BitArray(new[] {one, two, three, four, five, six, seven, eight}));
+            return Get(new BitArray(new[] { one, two, three, four, five, six, seven, eight }));
         }
-        
-        internal static readonly ImmutableDictionary<string, char> Dots = new Dictionary<string, char>()
+
+        private static readonly ImmutableDictionary<string, char> s_dots = new Dictionary<string, char>()
         {
             { "", '\u2800' },
             { "1", '\u2801' },

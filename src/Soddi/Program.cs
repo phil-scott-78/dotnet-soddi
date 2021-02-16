@@ -12,8 +12,9 @@ const bool propagateExceptions = true;
 // args = new[] { "import", @"C:\Users\phils\Downloads\aviation.stackexchange.com\", "--dropAndCreate" };
 // args = new[] { "list" };
 // args = new[] { "download", "sp", "-p" };
-// args = new[] { "torrent", "stack", "-p" };
-args = new[] { "torrent", "math,space,sports,travel" };
+args = new[] { "torrent", "codegolf", "-p" };
+// args = new[] { "torrent", "math,space,sports,travel" };
+// args = new[] { "brent" };
 //args = new[] { "import", @"sports.stackexchange.com.7z", "--dropAndCreate" };
 // args = new[] { "list", "-h" };
 #else
@@ -34,10 +35,11 @@ const bool propagateExceptions = false;
             config.SetApplicationName("soddi");
             config.Settings.PropagateExceptions = propagateExceptions;
 
-            config.AddCommandWithExample<ImportHandler>("import", ImportOptions.Examples);
-            config.AddCommandWithExample<ListHandler>("list", ListOptions.Examples);
-            config.AddCommandWithExample<DownloadHandler>("download", DownloadOptions.Examples);
-            config.AddCommandWithExample<TorrentHandler>("torrent", TorrentOptions.Examples);
+            config.AddCommandWithExample<ImportHandler>("import", "Import a Stack Overflow archive", ImportOptions.Examples);
+            config.AddCommandWithExample<ListHandler>("list", "List available Stack Overflow archives", ListOptions.Examples);
+            config.AddCommandWithExample<DownloadHandler>("download", "Download a Stack Overflow archive", DownloadOptions.Examples);
+            config.AddCommandWithExample<BrentHandler>("brent", "Download one of the available SQL Server databases hosted by Brent Ozar", BrentOptions.Examples, true);
+            config.AddCommandWithExample<TorrentHandler>("torrent", "Download Stack Overflow archive via BitTorrent", TorrentOptions.Examples);
         });
 
     await app.RunAsync(args);

@@ -181,6 +181,7 @@ namespace Soddi
                 var chart = new BreakdownChart()
                     .Compact()
                     .Width(60)
+                    .UseValueFormatter(d => d.ToMetric())
                     .FullSize()
                     .AddItems(insertReport,
                         pair => new BreakdownChartItem(pair.Key, pair.Value, counter++)

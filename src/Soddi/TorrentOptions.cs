@@ -1,16 +1,9 @@
 ﻿using System.Collections.Generic;
 using System.ComponentModel;
-using System.Diagnostics;
 using System.IO.Abstractions;
-using System.Linq;
-using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
-using Humanizer;
 using JetBrains.Annotations;
-using MonoTorrent;
-using MonoTorrent.Client;
-using Soddi.ProgressBar;
 using Soddi.Services;
 using Spectre.Console;
 using Spectre.Console.Cli;
@@ -45,12 +38,15 @@ namespace Soddi
 
     public class TorrentHandler : AsyncCommand<TorrentOptions>
     {
+        private readonly AvailableArchiveParser _availableArchiveParser;
+        private readonly TorrentDownloader _torrentDownloader;
         private readonly IFileSystem _fileSystem;
         private readonly IAnsiConsole _console;
-        private AvailableArchiveParser _availableArchiveParser;
 
-        public TorrentHandler(IFileSystem fileSystem, IAnsiConsole console, AvailableArchiveParser availableArchiveParser)
+        public TorrentHandler(IFileSystem fileSystem, IAnsiConsole console,
+            AvailableArchiveParser availableArchiveParser)
         {
+            _torrentDownloader = new TorrentDownloader(fileSystem, console);
             _fileSystem = fileSystem;
             _console = console;
             _availableArchiveParser = availableArchiveParser;
@@ -71,18 +67,6 @@ namespace Soddi
                 throw new SoddiException($"Output path {outputPath} not found");
             }
 
-            var paddingFolder = _fileSystem.Path.Combine(outputPath, ".____padding_file");
-            var doesPaddingFolderExistToStart = _fileSystem.Directory.Exists(paddingFolder);
-
-            var progressBar = _console.Progress()
-                .AutoClear(false)
-                .Columns(new ProgressColumn[]
-                {
-                    new SpinnerColumn { CompletedText = Emoji.Known.CheckMark }, new DownloadedColumn(),
-                    new TaskDescriptionColumn(), new TorrentProgressBarColumn(), new PercentageColumn(),
-                    new TransferSpeedColumn(), new RemainingTimeColumn()
-                });
-
             _console.WriteLine("Finding archive files...");
 
             var archiveUrls =
@@ -102,88 +86,10 @@ namespace Soddi
                 });
             }
 
-            var stopWatch = Stopwatch.StartNew();
+            const string Url = "https://archive.org/download/stackexchange/stackexchange_archive.torrent";
 
-            await progressBar.StartAsync(async ctx =>
-            {
-                _console.WriteLine("Loading torrent...");
-                const string Url = "https://archive.org/download/stackexchange/stackexchange_archive.torrent";
-                var httpClient = new HttpClient();
-                var torrentContents = await httpClient.GetByteArrayAsync(Url, cancellationToken);
-                var settings = new EngineSettings
-                {
-                    AllowedEncryption = EncryptionTypes.All, SavePath = outputPath, MaximumHalfOpenConnections = 16
-                };
-
-
-                _console.WriteLine("Initializing BitTorrent engine...");
-                var engine = new ClientEngine(settings);
-
-                if (request.EnablePortForwarding)
-                {
-                    _console.WriteLine("Attempting to forward ports");
-                    await engine.EnablePortForwardingAsync(cancellationToken);
-                }
-
-                var torrent = await Torrent.LoadAsync(torrentContents);
-                foreach (var torrentFile in torrent.Files)
-                {
-                    if (!potentialArchives.Contains(torrentFile.Path))
-                    {
-                        torrentFile.Priority = Priority.DoNotDownload;
-                    }
-                }
-
-                var manager = new TorrentManager(
-                    torrent,
-                    outputPath,
-                    new TorrentSettings { MaximumConnections = 250 }, string.Empty);
-
-                await engine.Register(manager);
-                await engine.StartAll();
-
-                var fileTasks = manager.Torrent.Files
-                    .Where(i => i.Priority != Priority.DoNotDownload)
-                    .ToDictionary(
-                        i => i.Path,
-                        file => ctx.AddTask(file.Path, new ProgressTaskSettings { MaxValue = file.Length })
-                    );
-
-                while (manager.State != TorrentState.Stopped && manager.State != TorrentState.Seeding)
-                {
-                    foreach (var torrentFile in manager.Torrent.Files.Where(i => i.Priority != Priority.DoNotDownload))
-                    {
-                        var progressTask = fileTasks[torrentFile.Path];
-                        progressTask.Increment(torrentFile.BytesDownloaded - progressTask.Value);
-                        progressTask.State.Update<BitSmuggler>("torrentBits",
-                            _ => new BitSmuggler(torrentFile.BitField));
-                    }
-
-                    await Task.Delay(100, cancellationToken);
-                }
-
-                await manager.StopAsync();
-                await engine.StopAllAsync();
-
-                try
-                {
-                    // the stackoverflow torrent files, and I think all of archive.org
-                    // seem to have these padding files that sneak into the download even
-                    // if they aren't included in the file list. not quite sure how to prevent that
-                    // so I'm gonna delete them after the fact I guess
-                    if (!doesPaddingFolderExistToStart && _fileSystem.Directory.Exists(paddingFolder))
-                    {
-                        _fileSystem.Directory.Delete(paddingFolder, true);
-                    }
-                }
-                catch
-                {
-                    /* swallow */
-                }
-            });
-
-            stopWatch.Stop();
-            _console.MarkupLine($"Download complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
+            await _torrentDownloader.Download(Url, potentialArchives, request.EnablePortForwarding, outputPath,
+                cancellationToken);
             return await Task.FromResult(0);
         }
     }
