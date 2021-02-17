@@ -15,13 +15,13 @@ namespace Soddi.ProgressBar
         /// Gets or sets the <see cref="CultureInfo"/> to use.
         /// </summary>
         public CultureInfo? Culture { get; set; }
-        
+
         /// <inheritdoc/>
         public override IRenderable Render(RenderContext context, ProgressTask task, TimeSpan deltaTime)
         {
             var total = ByteSize.FromBytes(task.MaxValue);
             var cultureInfo = Culture ?? CultureInfo.CurrentCulture;
-            
+
             if (task.IsFinished)
             {
                 return new Markup($"[green]{total.ToString("#.#", cultureInfo)}[/]");

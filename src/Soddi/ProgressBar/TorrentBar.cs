@@ -69,13 +69,13 @@ namespace Soddi.ProgressBar
                 var first = true;
                 return new Segment(DotPattern.Get(new BitArray(chunk.Select(i =>
                 {
-                    if (i > .1m && first)
+                    if (i <= .1m || !first)
                     {
-                        first = false;
-                        return true;
+                        return false;
                     }
 
-                    return false;
+                    first = false;
+                    return true;
                 }).ToArray())).ToString(), new Style(Color.Grey));
             }
 

@@ -24,7 +24,7 @@ namespace Soddi.Tests
                 320, FilledArray(165, false).Concat(FilledArray(165, true)).ToArray(),
                 FilledArray(160, 0m).Concat(FilledArray(160, 1m)).ToArray()
             };
-            
+
             yield return new object[]
             {
                 320, FilledArray(150, false).Concat(FilledArray(150, true)).ToArray(),

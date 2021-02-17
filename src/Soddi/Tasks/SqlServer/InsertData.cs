@@ -4,6 +4,7 @@ using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Data;
 using System.Threading.Tasks;
+using Humanizer;
 using Soddi.Services;
 
 namespace Soddi.Tasks.SqlServer
@@ -62,14 +63,15 @@ namespace Soddi.Tasks.SqlServer
                 var insert = Task.Factory.StartNew(() =>
                 {
                     var sizePerRow = s_approxSizePerRow[fileName];
+                    var estRowsPerFile = fileSize / sizePerRow;
                     var totalBatchCount = 0L;
                     var inserter = new SqlServerBulkInserter(_connectionString, _dbName, l =>
                     {
                         var diff = l - totalBatchCount;
                         totalBatchCount = l;
-                        var min = diff * sizePerRow;
                         fileReport.AddOrUpdate(fileName, _ => l, (_, _) => l);
-                        progress.Report((fileName, $"{fileName} ({l} rows read)", min, fileSize));
+                        string rowsRead = l < int.MaxValue ? Convert.ToDouble(l).ToMetric(decimals: 2) : "billions of";
+                        progress.Report((fileName, $"{fileName} ({rowsRead} rows)", diff, estRowsPerFile));
                     });
 
                     var isPostFile = fileName.Equals("posts.xml", StringComparison.InvariantCultureIgnoreCase);

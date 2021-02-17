@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Collections.Immutable;
 using System.Linq;
-using System.Runtime.ExceptionServices;
 using MonoTorrent;
 
 namespace Soddi.ProgressBar

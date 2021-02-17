@@ -7,7 +7,6 @@ using System.Net.Http;
 using System.Threading;
 using System.Threading.Tasks;
 using Humanizer;
-using Humanizer.Localisation;
 using MonoTorrent;
 using MonoTorrent.Client;
 using Soddi.ProgressBar;
@@ -51,7 +50,7 @@ namespace Soddi
                 {
                     new SpinnerColumn { CompletedText = Emoji.Known.CheckMark }, new DownloadedColumnExtended(),
                     new TaskDescriptionColumn(), new TorrentProgressBarColumn(), new PercentageColumn(),
-                    new TransferSpeedColumn(), new RemainingTimeColumnExtended()
+                    new TransferSpeedColumn(), new RemainingTimeColumn()
                 });
 
             ImmutableList<TorrentFile>? downloadedFiles = null;
@@ -103,7 +102,8 @@ namespace Soddi
                 var fileTasks = downloadedFiles
                     .ToDictionary(
                         i => i.Path,
-                        file => ctx.AddTask(file.Path, new ProgressTaskSettings { MaxValue = file.Length, AutoStart = false})
+                        file => ctx.AddTask(file.Path,
+                            new ProgressTaskSettings { MaxValue = file.Length, AutoStart = false })
                     );
 
                 while (manager.State != TorrentState.Stopped && manager.State != TorrentState.Seeding)
@@ -115,7 +115,7 @@ namespace Soddi
                         {
                             progressTask.StartTask();
                         }
-                        
+
                         progressTask.Increment(torrentFile.BytesDownloaded - progressTask.Value);
                         progressTask.State.Update<BitSmuggler>("torrentBits",
                             _ => new BitSmuggler(torrentFile.BitField));
@@ -142,19 +142,19 @@ namespace Soddi
                 {
                     /* swallow */
                 }
-                
+
                 foreach (var progressTask in fileTasks)
                 {
                     progressTask.Value.StopTask();
                 }
             });
 
-            
-            
+
             stopWatch.Stop();
             _console.MarkupLine($"Download complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
 
-            return downloadedFiles?.Select(i => _fileSystem.Path.Combine(outputPath, i.Path)).ToImmutableList() ?? ImmutableList<string>.Empty;
+            return downloadedFiles?.Select(i => _fileSystem.Path.Combine(outputPath, i.Path)).ToImmutableList() ??
+                   ImmutableList<string>.Empty;
         }
     }
 }
