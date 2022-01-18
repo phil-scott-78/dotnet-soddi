@@ -10,6 +10,7 @@
   <ItemGroup>
     <PackageReference Include="Humanizer.Core" Version="2.8.26" />
     <PackageReference Include="JetBrains.Annotations" Version="2020.3.0" />
+    <PackageReference Include="Microsoft.Data.SqlClient" Version="4.0.1" />
     <PackageReference Include="Microsoft.Extensions.DependencyInjection" Version="5.0.1" />
     <PackageReference Include="MonoTorrent" Version="1.0.28" />
     <PackageReference Include="Roslyn.System.IO.Abstractions.Analyzers" Version="12.2.19">
@@ -19,7 +20,6 @@
     <PackageReference Include="Scrutor" Version="3.3.0" />
     <PackageReference Include="SharpCompress" Version="0.28.1" />
     <PackageReference Include="Spectre.Console" Version="0.37.1-preview.0.28" />
-    <PackageReference Include="System.Data.SqlClient" Version="4.8.2" />
     <PackageReference Include="System.IO.Abstractions" Version="13.2.8" />
   </ItemGroup>
 
