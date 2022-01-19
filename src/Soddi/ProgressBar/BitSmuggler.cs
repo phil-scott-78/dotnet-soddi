@@ -19,6 +19,25 @@ internal readonly struct BitSmuggler
 
 public static class BitAverage
 {
+    private static int GreatestCommonFactor(int a, int b)
+    {
+        while (b != 0)
+        {
+            var temp = b;
+            b = a % b;
+            a = temp;
+        }
+
+        return a;
+    }
+
+    private static int LeastCommonMultiple(int a, int b)
+    {
+        return a / GreatestCommonFactor(a, b) * b;
+    }
+
+    private static readonly ConcurrentDictionary<(int, int), int> s_leastCommonMultipleCache = new();
+
     public static IImmutableList<decimal> Average(IEnumerable<bool> bitsEnumerable, int desiredLength)
     {
         var bits = bitsEnumerable.Select(i => i ? 1m : 0m).ToImmutableList();
@@ -29,7 +48,8 @@ public static class BitAverage
 
         if (bits.Count > desiredLength && bits.Count < desiredLength * 2)
         {
-            bits = ExpandTheBits(bits, desiredLength * 10).ToImmutableList();
+            var lcm = s_leastCommonMultipleCache.GetOrAdd((bits.Count, desiredLength), value => LeastCommonMultiple(value.Item1, value.Item2));
+            bits = ExpandTheBits(bits, lcm).ToImmutableList();
         }
 
         if (bits.Count > desiredLength)
@@ -46,7 +66,7 @@ public static class BitAverage
 
     private static IEnumerable<decimal> ExpandTheBits(ImmutableList<decimal> bits, int desiredLength)
     {
-        var expandedBitsPerInputBit = Convert.ToInt16(Math.Floor((decimal)(desiredLength) / bits.Count));
+        var expandedBitsPerInputBit = Convert.ToInt16(Math.Floor((decimal)desiredLength / bits.Count));
         var bitCount = 0;
         var lastBit = 0m;
         foreach (var bit in bits)

@@ -65,7 +65,7 @@ public class ListHandler : AsyncCommand<ListOptions>
             table.AddRow(new Markup($"[white]{archive.ShortName}[/]"), innerTable);
         }
 
-        _console.Render(table);
+        _console.Write(table);
 
         return await Task.FromResult(0);
     }

@@ -63,7 +63,7 @@ public class InsertData : ITask
                     var diff = l - totalBatchCount;
                     totalBatchCount = l;
                     fileReport.AddOrUpdate(fileName, _ => l, (_, _) => l);
-                    string rowsRead = l < int.MaxValue ? Convert.ToDouble(l).ToMetric(decimals: 2) : "billions of";
+                    var rowsRead = l < int.MaxValue ? Convert.ToDouble(l).ToMetric(decimals: 2) : "billions of";
                     progress.Report((fileName, $"{fileName} ({rowsRead} rows)", diff, estRowsPerFile));
                 });
 
@@ -85,7 +85,7 @@ public class InsertData : ITask
                     });
                 }
 
-                IDataReader dataReader = blockingStream
+                var dataReader = blockingStream
                     .AsDataReader(
                         fileName,
                         postAndTag => postTagDataReader?.Push(postAndTag.postId, postAndTag.tags)

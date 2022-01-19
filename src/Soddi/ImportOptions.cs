@@ -173,7 +173,7 @@ public class ImportHandler : AsyncCommand<ImportOptions>
                 );
 
             _console.MarkupLine("[blue]Rows inserted[/]");
-            _console.Render(chart);
+            _console.Write(chart);
         }
 
         _console.WriteLine();
