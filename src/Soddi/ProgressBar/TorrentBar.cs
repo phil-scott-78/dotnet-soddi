@@ -30,7 +30,7 @@ internal sealed class TorrentBar : Renderable
 
     private IEnumerable<Segment> ExpandTheBitsRender(int maxWidth)
     {
-        var bits = BitAverage.Average(_bits, maxWidth * 8);
+        var bits = BitAverage.Average(_bits.ToList(), maxWidth * 8);
         var segmentPos = 0;
         var segment = new decimal[8];
         foreach (var bit in bits)

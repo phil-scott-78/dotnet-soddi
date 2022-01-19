@@ -1,4 +1,5 @@
-﻿using MonoTorrent;
+﻿using System.Buffers;
+using MonoTorrent;
 
 namespace Soddi.ProgressBar;
 
@@ -13,7 +14,7 @@ internal readonly struct BitSmuggler
 
     public IEnumerable<decimal> Smush(int desiredLength)
     {
-        return BitAverage.Average(Bits, desiredLength);
+        return BitAverage.Average(Bits.ToList(), desiredLength);
     }
 }
 
@@ -37,34 +38,28 @@ public static class BitAverage
     }
 
     private static readonly ConcurrentDictionary<(int, int), int> s_leastCommonMultipleCache = new();
+    private static readonly ArrayPool<decimal> s_decimalArrayPool = ArrayPool<decimal>.Shared;
 
-    public static IImmutableList<decimal> Average(IEnumerable<bool> bitsEnumerable, int desiredLength)
+    public static IEnumerable<decimal> Average(IList<bool> inputBits, int desiredLength)
     {
-        var bits = bitsEnumerable.Select(i => i ? 1m : 0m).ToImmutableList();
-        if (bits.Count == desiredLength)
+        if (inputBits.Count == desiredLength)
         {
-            return bits;
+            return inputBits.Select(i => i ? 1m : 0m).ToArray();
         }
 
-        if (bits.Count > desiredLength && bits.Count < desiredLength * 2)
-        {
-            var lcm = s_leastCommonMultipleCache.GetOrAdd((bits.Count, desiredLength), value => LeastCommonMultiple(value.Item1, value.Item2));
-            bits = ExpandTheBits(bits, lcm).ToImmutableList();
-        }
+        var lcm = s_leastCommonMultipleCache.GetOrAdd((inputBits.Count, desiredLength), value => LeastCommonMultiple(value.Item1, value.Item2));
+        var buffer = s_decimalArrayPool.Rent(lcm);
+        var outputBuffer = new decimal[desiredLength];
 
-        if (bits.Count > desiredLength)
-        {
-            bits = SmushTheBits(bits, desiredLength).ToImmutableList();
-        }
-        else if (bits.Count <= desiredLength / 2)
-        {
-            bits = ExpandTheBits(bits, desiredLength).ToImmutableList();
-        }
+        ExpandTheBits(inputBits.Select(i => i ? 1m : 0m).ToList(), lcm, buffer);
+        SmushTheBits(buffer, outputBuffer, lcm, desiredLength);
 
-        return PadTheBits(bits, desiredLength).ToImmutableList();
+        s_decimalArrayPool.Return(buffer);
+
+        return outputBuffer;
     }
 
-    private static IEnumerable<decimal> ExpandTheBits(ImmutableList<decimal> bits, int desiredLength)
+    private static void ExpandTheBits(ICollection<decimal> bits, int desiredLength, decimal[] buffer)
     {
         var expandedBitsPerInputBit = Convert.ToInt16(Math.Floor((decimal)desiredLength / bits.Count));
         var bitCount = 0;
@@ -74,71 +69,50 @@ public static class BitAverage
             for (var i = 0; i < expandedBitsPerInputBit; i++)
             {
                 lastBit = bit;
+                buffer[bitCount] = bit;
                 bitCount++;
-
-                yield return bit;
             }
         }
 
         for (var i = bitCount; i < desiredLength; i++)
         {
-            yield return lastBit;
+            buffer[i] = lastBit;
         }
     }
 
-    private static IEnumerable<decimal> SmushTheBits(ImmutableList<decimal> bits, int desiredLength)
+    private static void SmushTheBits(IReadOnlyList<decimal> bits, decimal[] outputBuffer, int bufferSize, int desiredLength)
     {
-        var inputBitsPerReturnBit = Convert.ToInt16(Math.Floor((decimal)bits.Count / desiredLength));
+        var inputBitsPerReturnBit = Convert.ToInt16(Math.Floor((decimal)bufferSize / desiredLength));
         var pos = 0;
         var chunkTotal = 0m;
         var chunkCount = 0;
         var bitCount = 0;
 
-        while (pos < bits.Count)
+        while (pos < bufferSize)
         {
             chunkTotal += bits[pos];
             chunkCount++;
             pos++;
 
-            if (chunkCount == inputBitsPerReturnBit)
+            if (chunkCount != inputBitsPerReturnBit)
             {
-                yield return chunkTotal / inputBitsPerReturnBit;
+                continue;
+            }
 
-                chunkTotal = 0;
-                chunkCount = 0;
-                bitCount++;
-                if (bitCount > desiredLength)
-                {
-                    yield break;
-                }
+            outputBuffer[bitCount] = chunkTotal / inputBitsPerReturnBit;
+
+            chunkTotal = 0;
+            chunkCount = 0;
+            bitCount++;
+            if (bitCount > desiredLength)
+            {
+                break;
             }
         }
 
         if (chunkCount != 0)
         {
-            yield return chunkTotal / inputBitsPerReturnBit;
-        }
-    }
-
-    private static IEnumerable<decimal> PadTheBits(ImmutableList<decimal> bits, int desiredLength)
-    {
-        var numberOfDoubleUps = (desiredLength - bits.Count) / 2;
-        var totalRendered = 0;
-        for (var index = 0; index < bits.Count; index++)
-        {
-            if (index < numberOfDoubleUps || index >= bits.Count - numberOfDoubleUps)
-            {
-                totalRendered++;
-                yield return bits[index];
-            }
-
-            totalRendered++;
-            yield return bits[index];
-        }
-
-        for (var index = totalRendered; index < desiredLength; index++)
-        {
-            yield return bits[^1];
+            outputBuffer[bitCount] = chunkTotal / inputBitsPerReturnBit;
         }
     }
 }

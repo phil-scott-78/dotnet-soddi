@@ -39,8 +39,8 @@ public class BitAveragerTests
         {
             4, new[] { true, false, false, true, false, false, false, false }, new[] { .5m, .5m, 0m, 0m }
         };
-        yield return new object[] { 3, new[] { true, false }, new decimal[] { 1, 0, 0 } };
-        yield return new object[] { 5, new[] { true, false }, new decimal[] { 1, 1, 0, 0, 0 } };
+        yield return new object[] { 3, new[] { true, false }, new decimal[] { 1, .5m, 0 } };
+        yield return new object[] { 5, new[] { true, false }, new decimal[] { 1, 1, .5m, 0, 0 } };
         yield return new object[] { 4, new[] { true, false }, new decimal[] { 1, 1, 0, 0 } };
         yield return new object[] { 6, new[] { true, false }, new decimal[] { 1, 1, 1, 0, 0, 0 } };
     }
