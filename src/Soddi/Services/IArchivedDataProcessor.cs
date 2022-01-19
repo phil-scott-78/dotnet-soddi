@@ -1,11 +1,7 @@
-﻿using System.Collections.Generic;
-using System.IO;
+﻿namespace Soddi.Services;
 
-namespace Soddi.Services
+public interface IArchivedDataProcessor
 {
-    public interface IArchivedDataProcessor
-    {
-        IEnumerable<(string fileName, Stream stream, int size)> GetFiles();
-        long GetTotalFileSize();
-    }
+    IEnumerable<(string fileName, Stream stream, int size)> GetFiles();
+    long GetTotalFileSize();
 }

@@ -1,73 +1,71 @@
-﻿using System;
-using System.Collections.Generic;
-using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 
-namespace Soddi.Tasks.SqlServer
+namespace Soddi.Tasks.SqlServer;
+
+public class CreateSchema : ITask
 {
-    public class CreateSchema : ITask
+    private readonly string _connectionString;
+    private readonly bool _includePostTags;
+
+    public CreateSchema(string connectionString, bool includePostTags)
     {
-        private readonly string _connectionString;
-        private readonly bool _includePostTags;
+        _connectionString = connectionString;
+        _includePostTags = includePostTags;
+    }
 
-        public CreateSchema(string connectionString, bool includePostTags)
+    public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
+    {
+        CheckIfAlreadyExists();
+
+        var statements = Sql.Split("GO");
+        using var sqlConn = new SqlConnection(_connectionString);
+        sqlConn.Open();
+
+        var incrementValue = GetTaskWeight() / statements.Length;
+
+        foreach (var statement in statements)
         {
-            _connectionString = connectionString;
-            _includePostTags = includePostTags;
+            using var command = new SqlCommand(statement, sqlConn);
+            command.ExecuteNonQuery();
+            progress.Report(("createSchema", "Creating objects", incrementValue, GetTaskWeight()));
         }
+    }
 
-        public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
-        {
-            CheckIfAlreadyExists();
-
-            var statements = Sql.Split("GO");
-            using var sqlConn = new SqlConnection(_connectionString);
-            sqlConn.Open();
-
-            var incrementValue = GetTaskWeight() / statements.Length;
-
-            foreach (var statement in statements)
-            {
-                using var command = new SqlCommand(statement, sqlConn);
-                command.ExecuteNonQuery();
-                progress.Report(("createSchema", "Creating objects", incrementValue, GetTaskWeight()));
-            }
-        }
-
-        private void CheckIfAlreadyExists()
-        {
-            var sql = @"SELECT TABLE_NAME
+    private void CheckIfAlreadyExists()
+    {
+        var sql = @"SELECT TABLE_NAME
     FROM INFORMATION_SCHEMA.TABLES 
     WHERE TABLE_SCHEMA = 'dbo' 
     AND  TABLE_NAME in ('Badges', 'Comments', 'LinkTypes', 'PostHistory', 'PostHistoryTypes', 'PostLinks', 'Posts', 'PostTypes', 'Tags', 'Users', 'Votes', 'VoteTypes')";
 
-            using var sqlConn = new SqlConnection(_connectionString);
-            sqlConn.Open();
-            using var sqlCommand = new SqlCommand(sql, sqlConn);
+        using var sqlConn = new SqlConnection(_connectionString);
+        sqlConn.Open();
+        using var sqlCommand = new SqlCommand(sql, sqlConn);
 
-            var tablesThatAlreadyExist = new List<string>();
-            using var dr = sqlCommand.ExecuteReader();
-            while (dr.Read())
-            {
-                tablesThatAlreadyExist.Add(dr.GetString(0));
-            }
-
-            if (tablesThatAlreadyExist.Count > 0)
-            {
-                throw new SoddiException(
-                    $"Schema already exists in database {_connectionString}.\n\tTables: {string.Join(", ", tablesThatAlreadyExist)}.\n\nTo drop and recreate the database use the --dropAndCreate option");
-            }
+        var tablesThatAlreadyExist = new List<string>();
+        using var dr = sqlCommand.ExecuteReader();
+        while (dr.Read())
+        {
+            tablesThatAlreadyExist.Add(dr.GetString(0));
         }
 
-        public double GetTaskWeight()
+        if (tablesThatAlreadyExist.Count > 0)
         {
-            return 10000;
+            throw new SoddiException(
+                $"Schema already exists in database {_connectionString}.\n\tTables: {string.Join(", ", tablesThatAlreadyExist)}.\n\nTo drop and recreate the database use the --dropAndCreate option");
         }
+    }
 
-        private string Sql
+    public double GetTaskWeight()
+    {
+        return 10000;
+    }
+
+    private string Sql
+    {
+        get
         {
-            get
-            {
-                var s = @"
+            var s = @"
 CREATE TABLE [dbo].[Badges](
 	[Id] [int] IDENTITY(1,1) NOT NULL,
 	[Name] [nvarchar](40) NOT NULL,
@@ -207,9 +205,9 @@ CREATE TABLE [dbo].[VoteTypes](
 GO
 ";
 
-                if (_includePostTags)
-                {
-                    s += @"
+            if (_includePostTags)
+            {
+                s += @"
 /****** Object:  Table [dbo].[PostTags]    Script Date: 9/15/2020 7:48:12 PM ******/
 
 CREATE TABLE [dbo].[PostTags] (
@@ -218,10 +216,9 @@ CREATE TABLE [dbo].[PostTags] (
   , CONSTRAINT [PK_PostTags__PostId_Tag] PRIMARY KEY CLUSTERED ( [PostId] ASC,[Tag] ASC ) ON [PRIMARY]
   ) ON [PRIMARY]
 ";
-                }
-
-                return s;
             }
+
+            return s;
         }
     }
 }

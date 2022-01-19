@@ -1,11 +1,8 @@
-﻿using System;
+﻿namespace Soddi;
 
-namespace Soddi
+public class SoddiException : Exception
 {
-    public class SoddiException : Exception
+    public SoddiException(string? message) : base(message)
     {
-        public SoddiException(string? message) : base(message)
-        {
-        }
     }
 }

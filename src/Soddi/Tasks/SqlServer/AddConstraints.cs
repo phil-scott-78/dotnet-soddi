@@ -1,40 +1,39 @@
-﻿using System;
-using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 
-namespace Soddi.Tasks.SqlServer
+namespace Soddi.Tasks.SqlServer;
+
+public class AddConstraints : ITask
 {
-    public class AddConstraints : ITask
+    private readonly string _connectionString;
+
+    public AddConstraints(string connectionString)
     {
-        private readonly string _connectionString;
+        _connectionString = connectionString;
+    }
 
-        public AddConstraints(string connectionString)
+    public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
+    {
+        progress.Report(("add-constraints", "Adding constraints", 0, GetTaskWeight()));
+        var statements = Sql.Split("GO");
+        using var sqlConn = new SqlConnection(_connectionString);
+        sqlConn.Open();
+
+
+        var taskIncrement = GetTaskWeight() / statements.Length;
+        foreach (var statement in statements)
         {
-            _connectionString = connectionString;
+            progress.Report(("add-constraints", "Adding constraints", taskIncrement, GetTaskWeight()));
+            using var command = new SqlCommand(statement, sqlConn) { CommandTimeout = 3600 };
+            command.ExecuteNonQuery();
         }
+    }
 
-        public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
-        {
-            progress.Report(("add-constraints", "Adding constraints", 0, GetTaskWeight()));
-            var statements = Sql.Split("GO");
-            using var sqlConn = new SqlConnection(_connectionString);
-            sqlConn.Open();
+    public double GetTaskWeight()
+    {
+        return 10000;
+    }
 
-
-            var taskIncrement = GetTaskWeight() / statements.Length;
-            foreach (var statement in statements)
-            {
-                progress.Report(("add-constraints", "Adding constraints", taskIncrement, GetTaskWeight()));
-                using var command = new SqlCommand(statement, sqlConn) { CommandTimeout = 3600 };
-                command.ExecuteNonQuery();
-            }
-        }
-
-        public double GetTaskWeight()
-        {
-            return 10000;
-        }
-
-        private const string Sql = @"
+    private const string Sql = @"
 ALTER TABLE [dbo].[Badges] ADD  CONSTRAINT [PK_Badges__Id] PRIMARY KEY CLUSTERED 
 (
 	[Id] ASC
@@ -129,5 +128,4 @@ ALTER TABLE [dbo].[VoteTypes] ADD  CONSTRAINT [PK_VoteType__Id] PRIMARY KEY CLUS
 )WITH (PAD_INDEX = OFF, STATISTICS_NORECOMPUTE = OFF, SORT_IN_TEMPDB = OFF, IGNORE_DUP_KEY = OFF, ONLINE = OFF, ALLOW_ROW_LOCKS = ON, ALLOW_PAGE_LOCKS = ON, OPTIMIZE_FOR_SEQUENTIAL_KEY = OFF) ON [PRIMARY]
 GO
 ";
-    }
 }

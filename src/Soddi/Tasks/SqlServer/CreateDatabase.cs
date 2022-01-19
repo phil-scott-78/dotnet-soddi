@@ -1,73 +1,72 @@
-﻿using System;
-using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 
-namespace Soddi.Tasks.SqlServer
+namespace Soddi.Tasks.SqlServer;
+
+public class VerifyDatabaseExists : ITask
 {
-    public class VerifyDatabaseExists : ITask
+    private readonly string _connectionString;
+    private readonly string _databaseName;
+
+    public VerifyDatabaseExists(string connectionString, string databaseName)
     {
-        private readonly string _connectionString;
-        private readonly string _databaseName;
+        _connectionString = connectionString;
+        _databaseName = databaseName;
+    }
 
-        public VerifyDatabaseExists(string connectionString, string databaseName)
+    public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
+    {
+        var sql = $"select COUNT(*) from sys.databases where name = '{_databaseName}'";
+        using var sqlConn = new SqlConnection(_connectionString);
+        using var sqlCommand = new SqlCommand(sql, sqlConn);
+
+        sqlConn.Open();
+        progress.Report(("createDb", "Creating database", GetTaskWeight() / 2, GetTaskWeight()));
+        var result = (int)sqlCommand.ExecuteScalar();
+        if (result == 0)
         {
-            _connectionString = connectionString;
-            _databaseName = databaseName;
-        }
-
-        public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
-        {
-            var sql = $"select COUNT(*) from sys.databases where name = '{_databaseName}'";
-            using var sqlConn = new SqlConnection(_connectionString);
-            using var sqlCommand = new SqlCommand(sql, sqlConn);
-
-            sqlConn.Open();
-            progress.Report(("createDb", "Creating database", GetTaskWeight() / 2, GetTaskWeight()));
-            var result = (int)sqlCommand.ExecuteScalar();
-            if (result == 0)
-            {
-                throw new SoddiException(
-                    $"Database {_databaseName} does not exists.\nDatabase must exist, or use the --dropAndCreate option to build a default database.");
-            }
-        }
-
-        public double GetTaskWeight()
-        {
-            return 100;
+            throw new SoddiException(
+                $"Database {_databaseName} does not exists.\nDatabase must exist, or use the --dropAndCreate option to build a default database.");
         }
     }
 
-    public class CreateDatabase : ITask
+    public double GetTaskWeight()
     {
-        private readonly string _connectionString;
-        private readonly string _databaseName;
+        return 100;
+    }
+}
 
-        public CreateDatabase(string connectionString, string databaseName)
+public class CreateDatabase : ITask
+{
+    private readonly string _connectionString;
+    private readonly string _databaseName;
+
+    public CreateDatabase(string connectionString, string databaseName)
+    {
+        _connectionString = connectionString;
+        _databaseName = databaseName;
+    }
+
+    public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
+    {
+        var statements = Sql.Replace("DummyDatabaseName", _databaseName).Split("GO");
+        using var sqlConn = new SqlConnection(_connectionString);
+        sqlConn.Open();
+
+        var incrementValue = GetTaskWeight() / statements.Length;
+        foreach (var statement in statements)
         {
-            _connectionString = connectionString;
-            _databaseName = databaseName;
+            progress.Report(("createDb", "Creating database", incrementValue, GetTaskWeight()));
+            using var command = new SqlCommand(statement, sqlConn);
+            command.ExecuteNonQuery();
         }
+    }
 
-        public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
-        {
-            var statements = Sql.Replace("DummyDatabaseName", _databaseName).Split("GO");
-            using var sqlConn = new SqlConnection(_connectionString);
-            sqlConn.Open();
+    public double GetTaskWeight()
+    {
+        return 10000;
+    }
 
-            var incrementValue = GetTaskWeight() / statements.Length;
-            foreach (var statement in statements)
-            {
-                progress.Report(("createDb", "Creating database", incrementValue, GetTaskWeight()));
-                using var command = new SqlCommand(statement, sqlConn);
-                command.ExecuteNonQuery();
-            }
-        }
-
-        public double GetTaskWeight()
-        {
-            return 10000;
-        }
-
-        private const string Sql = @"
+    private const string Sql = @"
 USE [master]
 GO
 
@@ -175,5 +174,4 @@ GO
 ALTER DATABASE [DummyDatabaseName] SET  READ_WRITE 
 GO
 ";
-    }
 }

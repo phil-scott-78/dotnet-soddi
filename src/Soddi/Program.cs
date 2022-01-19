@@ -1,9 +1,6 @@
-﻿using System;
-using System.IO.Abstractions;
-using System.Text;
+﻿using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Soddi;
-using Spectre.Console.Cli;
 
 #if DEBUG
 Console.OutputEncoding = Encoding.UTF8;

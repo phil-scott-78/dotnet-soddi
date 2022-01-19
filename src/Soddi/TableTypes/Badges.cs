@@ -2,16 +2,13 @@
 // ReSharper disable UnusedType.Global
 // ReSharper disable UnusedMember.Global
 
-using System;
+namespace Soddi.TableTypes;
 
-namespace Soddi.TableTypes
+[StackOverflowDataTable("badges.xml")]
+public class Badges
 {
-    [StackOverflowDataTable("badges.xml")]
-    public class Badges
-    {
-        public DateTime Date { get; set; }
-        public int Id { get; set; }
-        public string Name { get; set; }
-        public int UserId { get; set; }
-    }
+    public DateTime Date { get; set; }
+    public int Id { get; set; }
+    public string Name { get; set; }
+    public int UserId { get; set; }
 }

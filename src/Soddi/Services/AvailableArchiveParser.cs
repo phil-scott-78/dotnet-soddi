@@ -1,184 +1,175 @@
-﻿using System;
-using System.Collections.Generic;
-using System.IO.Abstractions;
-using System.Linq;
-using System.Net.Http;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Xml.Linq;
-using Spectre.Console;
+﻿using System.Xml.Linq;
 
-namespace Soddi.Services
+namespace Soddi.Services;
+
+public class Archive
 {
-    public class Archive
+    public string ShortName { get; }
+    public string LongName { get; }
+    public List<UriWithSize> Uris { get; }
+
+    public Archive(string shortName, string longName, List<UriWithSize> uris)
     {
-        public string ShortName { get; }
-        public string LongName { get; }
-        public List<UriWithSize> Uris { get; }
-
-        public Archive(string shortName, string longName, List<UriWithSize> uris)
-        {
-            ShortName = shortName;
-            LongName = longName;
-            Uris = uris;
-        }
-
-        public class UriWithSize
-        {
-            private readonly IFileSystem _fileSystem;
-
-            public Uri Uri { get; }
-            public long SizeInBytes { get; }
-
-            public string Description(bool includeFileSize = true)
-            {
-                var fileName = _fileSystem.Path.GetFileName(Uri.AbsolutePath);
-                return includeFileSize ? $"{fileName} ({SizeInBytes.BytesToString()})" : fileName;
-            }
-
-            public UriWithSize(Uri uri, long sizeInBytes, IFileSystem? fileSystem = null)
-            {
-                Uri = uri;
-                SizeInBytes = sizeInBytes;
-                _fileSystem = fileSystem ?? new FileSystem();
-            }
-        }
+        ShortName = shortName;
+        LongName = longName;
+        Uris = uris;
     }
 
-    public class AvailableArchiveParser
+    public class UriWithSize
     {
-        private readonly IAnsiConsole _console;
+        private readonly IFileSystem _fileSystem;
 
-        public AvailableArchiveParser(IAnsiConsole console)
+        public Uri Uri { get; }
+        public long SizeInBytes { get; }
+
+        public string Description(bool includeFileSize = true)
         {
-            _console = console;
+            var fileName = _fileSystem.Path.GetFileName(Uri.AbsolutePath);
+            return includeFileSize ? $"{fileName} ({SizeInBytes.BytesToString()})" : fileName;
         }
 
-        public async Task<IEnumerable<Archive>> Get(CancellationToken cancellationToken)
+        public UriWithSize(Uri uri, long sizeInBytes, IFileSystem? fileSystem = null)
         {
-            const string BaseUrl = "https://archive.org/download/stackexchange/";
-            const string DownloadUrl = BaseUrl + "stackexchange_files.xml";
-
-            var client = new HttpClient();
-            using var response = client
-                .GetAsync(DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).Result;
-            var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
-
-            var doc = await XDocument.LoadAsync(stream, LoadOptions.None, cancellationToken);
-            if (doc.Root?.Document == null)
-            {
-                throw new Exception("Could not parse stackexchange_files.xml. XML Document was null");
-            }
-
-            // we need to find all the items that point to a .7z file and pull out
-            // their size
-            var items = doc.Root.Elements()
-                .Where(i => i.Element("format")?.Value == "7z")
-                .Select(i => new
-                {
-                    Name = i.Attribute("name")?.Value ?? throw new Exception("Name not found"),
-                    Size = i.Element("size")?.Value
-                })
-                .ToList();
-
-            // because stackoverflow is split into multiple files we need to group all these .7z files
-            // by everything to the left of a dash (if it exists). this way stackoverflow.com-posts,
-            // stackoverflow.com-comments all are grouped together while math.7z gets put into a grouping of one
-            var names = items.Select(i => StripDashName(i.Name)).Distinct().ToArray();
-
-            return names
-                .Select(archive => new
-                {
-                    name = archive,
-                    uris = items
-                        .Where(i => StripDashName(i.Name) == archive)
-                        .Select(i => new Archive.UriWithSize(new Uri(BaseUrl + i.Name), long.Parse(i.Size ?? "0")))
-                        .ToList()
-                })
-                .Select(archive => new Archive(
-                    shortName: archive.name.Replace(".stackexchange.com.7z", ""),
-                    longName: archive.name.Replace(".7z", ""),
-                    archive.uris));
-        }
-
-        public async Task<List<Archive>> FindOrPickArchive(string archiveItems, bool canUserPick,
-            CancellationToken cancellationToken)
-        {
-            var archives = archiveItems.Split(',', ';');
-            var results = (await this.Get(cancellationToken)).ToList();
-
-            var archivesToDownload = new List<Archive>();
-            foreach (var archive in archives)
-            {
-                var archiveUrl = results
-                    .FirstOrDefault(i => i.ShortName == archive ||
-                                         i.LongName == archive ||
-                                         i.ShortName.Contains($"{archive}-"));
-
-                if (archiveUrl != null)
-                {
-                    archivesToDownload.Add(archiveUrl);
-                }
-            }
-
-            if (archivesToDownload.Count > 0)
-                return archivesToDownload;
-
-            if (canUserPick == false)
-            {
-                throw new SoddiException($"Could not find archive named {archiveItems}");
-            }
-
-            var filteredResults = results.Where(i =>
-                i.ShortName.Contains(archiveItems, StringComparison.InvariantCultureIgnoreCase)).ToList();
-
-            if (filteredResults.Any() == false)
-            {
-                throw new SoddiException($"Could not find archive named {archiveItems}");
-            }
-
-            var item = _console.Prompt(
-                new SelectionPrompt<ArchiveSelectionOption>()
-                    .PageSize(10)
-                    .Title("Pick an archive to download")
-                    .AddChoices(filteredResults
-                        .Where(i => i.ShortName.Contains("meta.", StringComparison.InvariantCultureIgnoreCase) == false)
-                        .Select(ArchiveSelectionOption.FromArchive)));
-
-            return results
-                .Where(i => i.ShortName.Equals(item.ShortName, StringComparison.InvariantCultureIgnoreCase))
-                .ToList();
-        }
-
-
-        private static string StripDashName(string input)
-        {
-            var index = input.IndexOf("-", StringComparison.Ordinal);
-            return index < 0 ? input : input.Substring(0, index);
+            Uri = uri;
+            SizeInBytes = sizeInBytes;
+            _fileSystem = fileSystem ?? new FileSystem();
         }
     }
+}
 
-    internal class ArchiveSelectionOption
+public class AvailableArchiveParser
+{
+    private readonly IAnsiConsole _console;
+
+    public AvailableArchiveParser(IAnsiConsole console)
     {
-        private readonly string _title;
+        _console = console;
+    }
 
-        private ArchiveSelectionOption(string shortName, string title)
+    public async Task<IEnumerable<Archive>> Get(CancellationToken cancellationToken)
+    {
+        const string BaseUrl = "https://archive.org/download/stackexchange/";
+        const string DownloadUrl = BaseUrl + "stackexchange_files.xml";
+
+        var client = new HttpClient();
+        using var response = client
+            .GetAsync(DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).Result;
+        var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
+
+        var doc = await XDocument.LoadAsync(stream, LoadOptions.None, cancellationToken);
+        if (doc.Root?.Document == null)
         {
-            ShortName = shortName;
-            _title = title;
+            throw new Exception("Could not parse stackexchange_files.xml. XML Document was null");
         }
 
-        public static ArchiveSelectionOption FromArchive(Archive archive)
+        // we need to find all the items that point to a .7z file and pull out
+        // their size
+        var items = doc.Root.Elements()
+            .Where(i => i.Element("format")?.Value == "7z")
+            .Select(i => new
+            {
+                Name = i.Attribute("name")?.Value ?? throw new Exception("Name not found"),
+                Size = i.Element("size")?.Value
+            })
+            .ToList();
+
+        // because stackoverflow is split into multiple files we need to group all these .7z files
+        // by everything to the left of a dash (if it exists). this way stackoverflow.com-posts,
+        // stackoverflow.com-comments all are grouped together while math.7z gets put into a grouping of one
+        var names = items.Select(i => StripDashName(i.Name)).Distinct().ToArray();
+
+        return names
+            .Select(archive => new
+            {
+                name = archive,
+                uris = items
+                    .Where(i => StripDashName(i.Name) == archive)
+                    .Select(i => new Archive.UriWithSize(new Uri(BaseUrl + i.Name), long.Parse(i.Size ?? "0")))
+                    .ToList()
+            })
+            .Select(archive => new Archive(
+                shortName: archive.name.Replace(".stackexchange.com.7z", ""),
+                longName: archive.name.Replace(".7z", ""),
+                archive.uris));
+    }
+
+    public async Task<List<Archive>> FindOrPickArchive(string archiveItems, bool canUserPick,
+        CancellationToken cancellationToken)
+    {
+        var archives = archiveItems.Split(',', ';');
+        var results = (await this.Get(cancellationToken)).ToList();
+
+        var archivesToDownload = new List<Archive>();
+        foreach (var archive in archives)
         {
-            return new(archive.ShortName,
-                $"{archive.LongName} {archive.Uris.Sum(i => i.SizeInBytes).BytesToString()}");
+            var archiveUrl = results
+                .FirstOrDefault(i => i.ShortName == archive ||
+                                     i.LongName == archive ||
+                                     i.ShortName.Contains($"{archive}-"));
+
+            if (archiveUrl != null)
+            {
+                archivesToDownload.Add(archiveUrl);
+            }
         }
 
-        public string ShortName { get; }
+        if (archivesToDownload.Count > 0)
+            return archivesToDownload;
 
-        public override string ToString()
+        if (canUserPick == false)
         {
-            return _title;
+            throw new SoddiException($"Could not find archive named {archiveItems}");
         }
+
+        var filteredResults = results.Where(i =>
+            i.ShortName.Contains(archiveItems, StringComparison.InvariantCultureIgnoreCase)).ToList();
+
+        if (filteredResults.Any() == false)
+        {
+            throw new SoddiException($"Could not find archive named {archiveItems}");
+        }
+
+        var item = _console.Prompt(
+            new SelectionPrompt<ArchiveSelectionOption>()
+                .PageSize(10)
+                .Title("Pick an archive to download")
+                .AddChoices(filteredResults
+                    .Where(i => i.ShortName.Contains("meta.", StringComparison.InvariantCultureIgnoreCase) == false)
+                    .Select(ArchiveSelectionOption.FromArchive)));
+
+        return results
+            .Where(i => i.ShortName.Equals(item.ShortName, StringComparison.InvariantCultureIgnoreCase))
+            .ToList();
+    }
+
+
+    private static string StripDashName(string input)
+    {
+        var index = input.IndexOf("-", StringComparison.Ordinal);
+        return index < 0 ? input : input.Substring(0, index);
+    }
+}
+
+internal class ArchiveSelectionOption
+{
+    private readonly string _title;
+
+    private ArchiveSelectionOption(string shortName, string title)
+    {
+        ShortName = shortName;
+        _title = title;
+    }
+
+    public static ArchiveSelectionOption FromArchive(Archive archive)
+    {
+        return new(archive.ShortName,
+            $"{archive.LongName} {archive.Uris.Sum(i => i.SizeInBytes).BytesToString()}");
+    }
+
+    public string ShortName { get; }
+
+    public override string ToString()
+    {
+        return _title;
     }
 }

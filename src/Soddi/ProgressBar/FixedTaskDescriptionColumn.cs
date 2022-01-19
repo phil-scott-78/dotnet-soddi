@@ -1,22 +1,19 @@
-﻿using System;
-using Spectre.Console;
-using Spectre.Console.Rendering;
+﻿using Spectre.Console.Rendering;
 
-namespace Soddi.ProgressBar
+namespace Soddi.ProgressBar;
+
+public sealed class FixedTaskDescriptionColumn : ProgressColumn
 {
-    public sealed class FixedTaskDescriptionColumn : ProgressColumn
+    private readonly int _width;
+
+    public FixedTaskDescriptionColumn(int width)
     {
-        private readonly int _width;
+        _width = width;
+    }
 
-        public FixedTaskDescriptionColumn(int width)
-        {
-            _width = width;
-        }
-
-        public override IRenderable Render(RenderContext context, ProgressTask task, TimeSpan deltaTime)
-        {
-            var text = task.Description.Trim().PadRight(_width);
-            return new Markup(text).Overflow(Overflow.Ellipsis).LeftAligned();
-        }
+    public override IRenderable Render(RenderContext context, ProgressTask task, TimeSpan deltaTime)
+    {
+        var text = task.Description.Trim().PadRight(_width);
+        return new Markup(text).Overflow(Overflow.Ellipsis).LeftAligned();
     }
 }

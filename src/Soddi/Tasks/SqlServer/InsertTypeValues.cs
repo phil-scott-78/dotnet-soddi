@@ -1,33 +1,32 @@
-﻿using System;
-using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 
-namespace Soddi.Tasks.SqlServer
+namespace Soddi.Tasks.SqlServer;
+
+public class InsertTypeValues : ITask
 {
-    public class InsertTypeValues : ITask
+    private readonly string _connectionString;
+
+    public InsertTypeValues(string connectionString)
     {
-        private readonly string _connectionString;
+        _connectionString = connectionString;
+    }
 
-        public InsertTypeValues(string connectionString)
-        {
-            _connectionString = connectionString;
-        }
+    public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
+    {
+        using var sqlConn = new SqlConnection(_connectionString);
+        using var command = new SqlCommand(Sql, sqlConn);
 
-        public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
-        {
-            using var sqlConn = new SqlConnection(_connectionString);
-            using var command = new SqlCommand(Sql, sqlConn);
+        sqlConn.Open();
+        progress.Report(("insertValues", "Inserting type values", GetTaskWeight() / 2, GetTaskWeight()));
+        command.ExecuteNonQuery();
+    }
 
-            sqlConn.Open();
-            progress.Report(("insertValues", "Inserting type values", GetTaskWeight() / 2, GetTaskWeight()));
-            command.ExecuteNonQuery();
-        }
+    public double GetTaskWeight()
+    {
+        return 50000;
+    }
 
-        public double GetTaskWeight()
-        {
-            return 50000;
-        }
-
-        private const string Sql = @"
+    private const string Sql = @"
 SET IDENTITY_INSERT [VoteTypes] ON
 INSERT [VoteTypes] ([Id], [Name]) VALUES(1, N'AcceptedByOriginator')
 INSERT [VoteTypes] ([Id], [Name]) VALUES(2, N'UpMod')
@@ -104,5 +103,4 @@ INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(36, N'PostMigratedHere')
 INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(37, N'PostMergeSource')
 INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(38, N'PostMergeDestination')
 ";
-    }
 }

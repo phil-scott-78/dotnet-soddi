@@ -1,16 +1,13 @@
 ﻿#nullable disable
 
-using System;
+namespace Soddi.TableTypes;
 
-namespace Soddi.TableTypes
+public class StackOverflowDataTable : Attribute
 {
-    public class StackOverflowDataTable : Attribute
-    {
-        public string FileName { get; }
+    public string FileName { get; }
 
-        public StackOverflowDataTable(string fileName)
-        {
-            FileName = fileName;
-        }
+    public StackOverflowDataTable(string fileName)
+    {
+        FileName = fileName;
     }
 }

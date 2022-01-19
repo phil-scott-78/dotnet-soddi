@@ -5,133 +5,132 @@ using Shouldly;
 using Soddi.Services;
 using Xunit;
 
-namespace Soddi.Tests
+namespace Soddi.Tests;
+
+public class CreateProcessorTests
 {
-    public class CreateProcessorTests
+    private static readonly string[] s_expectedFiles = new[]
     {
-        private static readonly string[] s_expectedFiles = new[]
-        {
-            "badges", "comments", "posthistory", "postlinks", "posts", "tags", "users", "votes"
-        };
+        "badges", "comments", "posthistory", "postlinks", "posts", "tags", "users", "votes"
+    };
 
-        [Fact]
-        public void Missing_path_throws_exception()
+    [Fact]
+    public void Missing_path_throws_exception()
+    {
+        var mockFileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
         {
-            var mockFileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
+            { "archive.7z", new MockFileData("") }
+        });
+
+        var processorFactory = new ProcessorFactory(mockFileSystem);
+        Should.Throw<SoddiException>(() =>
+        {
+            processorFactory.VerifyAndCreateProcessor("not-archive.7z");
+        });
+    }
+
+    [Fact]
+    public void Archive_processor_is_created_for_7z_file()
+    {
+        var mockFileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
+        {
+            { "archive.7z", new MockFileData("") }
+        });
+
+        var processorFactory = new ProcessorFactory(mockFileSystem);
+        var processor = processorFactory.VerifyAndCreateProcessor("archive.7z");
+        processor.ShouldBeOfType<ArchiveProcessor>();
+    }
+
+    [Fact]
+    public void Non_7z_files_throw_exceptions()
+    {
+        var mockFileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
+        {
+            { "archive.zip", new MockFileData("") }
+        });
+
+        var processorFactory = new ProcessorFactory(mockFileSystem);
+
+        Should.Throw<SoddiException>(() =>
             {
-                { "archive.7z", new MockFileData("") }
-            });
+                processorFactory.VerifyAndCreateProcessor("archive.zip");
+            }
+        );
+    }
 
-            var processorFactory = new ProcessorFactory(mockFileSystem);
-            Should.Throw<SoddiException>(() =>
-            {
-                processorFactory.VerifyAndCreateProcessor("not-archive.7z");
-            });
-        }
+    [Fact]
+    public void Directory_with_7z_files_returns_archive_processor()
+    {
+        var files = s_expectedFiles.ToDictionary(s => "archive/" + s + ".7z", _ => new MockFileData("test"));
+        var mockFileSystem = new MockFileSystem(files);
 
-        [Fact]
-        public void Archive_processor_is_created_for_7z_file()
+        var processorFactory = new ProcessorFactory(mockFileSystem);
+
+        var processor = processorFactory.VerifyAndCreateProcessor("archive");
+        processor.ShouldBeOfType<ArchiveProcessor>();
+    }
+
+
+    [Fact]
+    public void Directory_with_xml_files_returns_folder_processor()
+    {
+        var files = s_expectedFiles.ToDictionary(s => "archive/" + s + ".xml", _ => new MockFileData("test"));
+        var mockFileSystem = new MockFileSystem(files);
+
+        var processorFactory = new ProcessorFactory(mockFileSystem);
+
+        var processor = processorFactory.VerifyAndCreateProcessor("archive");
+        processor.ShouldBeOfType<FolderProcessor>();
+    }
+
+
+    [Fact]
+    public void Directory_with_missing_7z_files_throws_exception()
+    {
+        var mockFileSystem = new MockFileSystem(new
+            Dictionary<string, MockFileData> { { "archive/blogs.xml", new MockFileData("") } }
+        );
+
+        var processorFactory = new ProcessorFactory(mockFileSystem);
+
+        Should.Throw<SoddiException>(() =>
         {
-            var mockFileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
-            {
-                { "archive.7z", new MockFileData("") }
-            });
+            processorFactory.VerifyAndCreateProcessor("archive");
+        });
+    }
 
-            var processorFactory = new ProcessorFactory(mockFileSystem);
-            var processor = processorFactory.VerifyAndCreateProcessor("archive.7z");
-            processor.ShouldBeOfType<ArchiveProcessor>();
-        }
+    [Fact]
+    public void Directory_with_both_xml_and_7z_files_returns_archive_processor()
+    {
+        var sevenFiles = s_expectedFiles.ToDictionary(s => "archive/" + s + ".7z", _ => new MockFileData("test"));
+        var xmlFiles = s_expectedFiles.ToDictionary(s => "archive/" + s + ".xml", _ => new MockFileData("test"));
 
-        [Fact]
-        public void Non_7z_files_throw_exceptions()
+        var files = sevenFiles.Concat(xmlFiles).ToDictionary(i => i.Key, i => i.Value);
+
+        var mockFileSystem = new MockFileSystem(files);
+
+        var processorFactory = new ProcessorFactory(mockFileSystem);
+
+        Should.Throw<SoddiException>(() =>
         {
-            var mockFileSystem = new MockFileSystem(new Dictionary<string, MockFileData>
-            {
-                { "archive.zip", new MockFileData("") }
-            });
+            processorFactory.VerifyAndCreateProcessor("archive");
+        });
+    }
 
-            var processorFactory = new ProcessorFactory(mockFileSystem);
 
-            Should.Throw<SoddiException>(() =>
-                {
-                    processorFactory.VerifyAndCreateProcessor("archive.zip");
-                }
-            );
-        }
+    [Fact]
+    public void Directory_with_no_xml_and_7z_files_throw_exception()
+    {
+        var mockFileSystem = new MockFileSystem(new
+            Dictionary<string, MockFileData> { { "archive/blogs.zip", new MockFileData("") } }
+        );
 
-        [Fact]
-        public void Directory_with_7z_files_returns_archive_processor()
+        var processorFactory = new ProcessorFactory(mockFileSystem);
+
+        Should.Throw<SoddiException>(() =>
         {
-            var files = s_expectedFiles.ToDictionary(s => "archive/" + s + ".7z", _ => new MockFileData("test"));
-            var mockFileSystem = new MockFileSystem(files);
-
-            var processorFactory = new ProcessorFactory(mockFileSystem);
-
-            var processor = processorFactory.VerifyAndCreateProcessor("archive");
-            processor.ShouldBeOfType<ArchiveProcessor>();
-        }
-
-
-        [Fact]
-        public void Directory_with_xml_files_returns_folder_processor()
-        {
-            var files = s_expectedFiles.ToDictionary(s => "archive/" + s + ".xml", _ => new MockFileData("test"));
-            var mockFileSystem = new MockFileSystem(files);
-
-            var processorFactory = new ProcessorFactory(mockFileSystem);
-
-            var processor = processorFactory.VerifyAndCreateProcessor("archive");
-            processor.ShouldBeOfType<FolderProcessor>();
-        }
-
-
-        [Fact]
-        public void Directory_with_missing_7z_files_throws_exception()
-        {
-            var mockFileSystem = new MockFileSystem(new
-                Dictionary<string, MockFileData> { { "archive/blogs.xml", new MockFileData("") } }
-            );
-
-            var processorFactory = new ProcessorFactory(mockFileSystem);
-
-            Should.Throw<SoddiException>(() =>
-            {
-                processorFactory.VerifyAndCreateProcessor("archive");
-            });
-        }
-
-        [Fact]
-        public void Directory_with_both_xml_and_7z_files_returns_archive_processor()
-        {
-            var sevenFiles = s_expectedFiles.ToDictionary(s => "archive/" + s + ".7z", _ => new MockFileData("test"));
-            var xmlFiles = s_expectedFiles.ToDictionary(s => "archive/" + s + ".xml", _ => new MockFileData("test"));
-
-            var files = sevenFiles.Concat(xmlFiles).ToDictionary(i => i.Key, i => i.Value);
-
-            var mockFileSystem = new MockFileSystem(files);
-
-            var processorFactory = new ProcessorFactory(mockFileSystem);
-
-            Should.Throw<SoddiException>(() =>
-            {
-                processorFactory.VerifyAndCreateProcessor("archive");
-            });
-        }
-
-
-        [Fact]
-        public void Directory_with_no_xml_and_7z_files_throw_exception()
-        {
-            var mockFileSystem = new MockFileSystem(new
-                Dictionary<string, MockFileData> { { "archive/blogs.zip", new MockFileData("") } }
-            );
-
-            var processorFactory = new ProcessorFactory(mockFileSystem);
-
-            Should.Throw<SoddiException>(() =>
-            {
-                processorFactory.VerifyAndCreateProcessor("archive");
-            });
-        }
+            processorFactory.VerifyAndCreateProcessor("archive");
+        });
     }
 }
