@@ -36,57 +36,51 @@ public class TorrentDownloader
 
         var progressBar = _console.Progress()
             .AutoClear(false)
-            .Columns(new ProgressColumn[]
-            {
-                new SpinnerColumn { CompletedText = Emoji.Known.CheckMark }, new DownloadedColumnExtended(),
-                new TaskDescriptionColumn(), new TorrentProgressBarColumn(), new PercentageColumn(),
-                new TransferSpeedColumn(), new RemainingTimeColumn()
-            });
+            .Columns(
+                new SpinnerColumn { CompletedText = Emoji.Known.CheckMark },
+                new DownloadedColumnExtended(),
+                new TaskDescriptionColumn(),
+                new TorrentProgressBarColumn(),
+                new PercentageColumn(),
+                new TransferSpeedColumn(),
+                new RemainingTimeColumn());
 
-        ImmutableList<TorrentFile>? downloadedFiles = null;
+        ImmutableList<ITorrentFileInfo>? downloadedFiles = null;
         await progressBar.StartAsync(async ctx =>
         {
             _console.WriteLine("Loading torrent...");
 
             var httpClient = new HttpClient();
             var torrentContents = await httpClient.GetByteArrayAsync(url, cancellationToken);
-            var settings = new EngineSettings
+
+            var settingBuilder = new EngineSettingsBuilder
             {
-                AllowedEncryption = EncryptionTypes.All, SavePath = outputPath, MaximumHalfOpenConnections = 16
+                AllowPortForwarding = enablePortForwarding,
+                AutoSaveLoadDhtCache = false,
+                AutoSaveLoadMagnetLinkMetadata = false,
             };
 
-
             _console.WriteLine("Initializing BitTorrent engine...");
-            var engine = new ClientEngine(settings);
-
-            if (enablePortForwarding)
-            {
-                _console.WriteLine("Attempting to forward ports");
-                await engine.EnablePortForwardingAsync(cancellationToken);
-            }
-
+            using var engine = new ClientEngine(settingBuilder.ToSettings());
             var torrent = await Torrent.LoadAsync(torrentContents);
+            var settingsBuilder =
+                new TorrentSettingsBuilder { MaximumConnections = 60, CreateContainingDirectory = false };
+            var manager = await engine.AddAsync(torrent, outputPath, settingsBuilder.ToSettings());
+
             if (potentialArchives != null)
             {
-                foreach (var torrentFile in torrent.Files)
+                foreach (var torrentFile in manager.Files)
                 {
                     if (!potentialArchives.Contains(torrentFile.Path))
                     {
-                        torrentFile.Priority = Priority.DoNotDownload;
+                        await manager.SetFilePriorityAsync(torrentFile, Priority.DoNotDownload);
                     }
                 }
             }
 
-            var manager = new TorrentManager(
-                torrent,
-                outputPath,
-                new TorrentSettings { MaximumConnections = 250 }, string.Empty);
+            await manager.StartAsync();
 
-            await engine.Register(manager);
-            await engine.StartAll();
-
-
-            downloadedFiles = manager.Torrent.Files
+            downloadedFiles = manager.Files
                 .Where(i => i.Priority != Priority.DoNotDownload).ToImmutableList();
 
             var fileTasks = downloadedFiles
@@ -101,12 +95,13 @@ public class TorrentDownloader
                 foreach (var torrentFile in downloadedFiles)
                 {
                     var progressTask = fileTasks[torrentFile.Path];
-                    if (torrentFile.BytesDownloaded > 0 && progressTask.IsStarted == false)
+                    var bytesDownloaded = torrentFile.BytesDownloaded();
+                    if (bytesDownloaded > 0 && progressTask.IsStarted == false)
                     {
                         progressTask.StartTask();
                     }
 
-                    progressTask.Increment(torrentFile.BytesDownloaded - progressTask.Value);
+                    progressTask.Increment(bytesDownloaded - progressTask.Value);
                     progressTask.State.Update<BitSmuggler>("torrentBits",
                         _ => new BitSmuggler(torrentFile.BitField));
                 }
