@@ -22,7 +22,7 @@ public class BlockingStream : Stream
     public override long Length { get { throw new NotSupportedException(); } }
     public override void Flush() { }
     public long TotalBytesWritten { get; private set; }
-    public int TotalBytesRead { get; set; }
+    public long TotalBytesRead { get; private set; }
 
     public int WriteCount { get; private set; }
 

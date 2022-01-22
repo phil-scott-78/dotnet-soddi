@@ -27,7 +27,7 @@ public class InsertData : ITask
     };
 
     public InsertData(string connectionString, string dbName, IArchivedDataProcessor processor,
-        bool includePostTags, Action<ImmutableDictionary<string, long>> summaryReporter, int blockSize = 1024)
+        bool includePostTags, Action<ImmutableDictionary<string, long>> summaryReporter, int blockSize = 1024 * 1024)
     {
         _connectionString = connectionString;
         _dbName = dbName;
@@ -60,11 +60,13 @@ public class InsertData : ITask
                 var totalBatchCount = 0L;
                 var inserter = new SqlServerBulkInserter(_connectionString, _dbName, l =>
                 {
+                    sizePerRow = (double)blockingStream.TotalBytesRead / l;
+                    estRowsPerFile = fileSize / sizePerRow;
                     var diff = l - totalBatchCount;
                     totalBatchCount = l;
                     fileReport.AddOrUpdate(fileName, _ => l, (_, _) => l);
                     var rowsRead = l < int.MaxValue ? Convert.ToDouble(l).ToMetric(decimals: 2) : "billions of";
-                    progress.Report((fileName, $"{fileName} ({rowsRead} rows)", diff, estRowsPerFile));
+                    progress.Report((fileName, $"{fileName} ({rowsRead} rows)", diff, Math.Max(estRowsPerFile, totalBatchCount + 1)));
                 });
 
                 var isPostFile = fileName.Equals("posts.xml", StringComparison.InvariantCultureIgnoreCase);

@@ -20,7 +20,7 @@ public class ImportOptions : CommandSettings
     [CommandOption("-c|--connectionString")]
     [Description(
         "Connection string to server. Initial catalog will be ignored and the database parameter will be used for the database name.")]
-    public string ConnectionString { get; set; } = "Server=.;Integrated Security=true";
+    public string ConnectionString { get; set; } = "Server=.;Integrated Security=true;TrustServerCertificate=True";
 
     [CommandOption("--dropAndCreate")]
     [Description(

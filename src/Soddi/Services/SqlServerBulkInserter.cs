@@ -1,4 +1,5 @@
 ﻿using Microsoft.Data.SqlClient;
+using Polly;
 
 namespace Soddi.Services;
 
@@ -27,16 +28,21 @@ public class SqlServerBulkInserter
 
         var connBuilder = new SqlConnectionStringBuilder(_connectionString) { InitialCatalog = _dbName };
 
-        using var bc =
+        var bc =
             new SqlBulkCopy(connBuilder.ConnectionString,
                 SqlBulkCopyOptions.TableLock | SqlBulkCopyOptions.KeepIdentity)
             {
-                DestinationTableName = tableName, EnableStreaming = true, NotifyAfter = 1000, BatchSize = 10000
+                DestinationTableName = tableName, EnableStreaming = true, NotifyAfter = 1000, BatchSize = 50000
             };
 
         for (var i = 0; i < dataReader.FieldCount; i++)
         {
             var column = dataReader.GetName(i);
+            if (column == "Id")
+            {
+                bc.ColumnOrderHints.Add(new SqlBulkCopyColumnOrderHint("Id", SortOrder.Ascending));
+            }
+
             bc.ColumnMappings.Add(column, column);
         }
 
@@ -45,6 +51,17 @@ public class SqlServerBulkInserter
             _rowsCopied(args.RowsCopied);
         };
 
-        bc.WriteToServer(dataReader);
+        var p = Policy
+            .Handle<SqlException>()
+            .WaitAndRetry(
+                100,
+                retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
+                (exception, span) => AnsiConsole.MarkupLine($"[red]Error[/]: {exception.Message}. Retrying in [blue]{span.Humanize()}[/]."));
+
+        p.Execute(() =>
+        {
+            bc.WriteToServer(dataReader);
+            ((IDisposable)bc).Dispose();
+        });
     }
 }

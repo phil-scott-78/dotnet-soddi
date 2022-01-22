@@ -10,10 +10,10 @@ const bool propagateExceptions = true;
 // args = new[] { "list" };
 // args = new[] { "download", "sp", "-p" };
 //args = new[] { "torrent", "codegolf", "-p" };
-args = new[] { "torrent", "space,sports,travel" };
+// args = new[] { "torrent", "space,sports,travel" };
 //args = new[] { "brent" };
 //args = new[] { "torrent", "sports" };
-// args = new[] { "import", @"sports.stackexchange.com.7z", "--dropAndCreate" };
+args = new[] { "import", @"R:\phil-scott\dotnet-soddi\src\Soddi\stackoverflow", "--dropAndCreate" };
 // args = new[] { "list", "-h" };
 #else
 const bool propagateExceptions = false;

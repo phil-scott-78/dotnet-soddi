@@ -95,6 +95,8 @@ USAGE:
 
 Import data using defaults:
   soddi import math.stackexchange.com.7z
+Import data from a folder containing a collection of .7z or .xml files:
+  soddi import stackoverflow
 Import data using a connection string and database name:
   soddi import --connectionString "Server=(local)\Sql2017;User Id=admin;password=t3ddy" --database math
   math.stackexchange.com.7z

@@ -2,6 +2,6 @@
 
 public interface IArchivedDataProcessor
 {
-    IEnumerable<(string fileName, Stream stream, int size)> GetFiles();
+    IEnumerable<(string fileName, Stream stream, long size)> GetFiles();
     long GetTotalFileSize();
 }

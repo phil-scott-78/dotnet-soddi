@@ -13,7 +13,7 @@ public class ArchiveProcessor : IArchivedDataProcessor
         _fileSystem = fileSystem ?? new FileSystem();
     }
 
-    public IEnumerable<(string fileName, Stream stream, int size)> GetFiles()
+    public IEnumerable<(string fileName, Stream stream, long size)> GetFiles()
     {
         foreach (var path in _paths)
         {
@@ -35,7 +35,7 @@ public class ArchiveProcessor : IArchivedDataProcessor
                 yield return (
                     filename,
                     entryStream,
-                    (int)Math.Min(int.MaxValue, allArchiveEntries.Entry.Size)
+                    allArchiveEntries.Entry.Size
                 );
             }
         }
@@ -65,14 +65,13 @@ public class FolderProcessor : IArchivedDataProcessor
         _fileSystem = fileSystem ?? new FileSystem();
     }
 
-    public IEnumerable<(string fileName, Stream stream, int size)> GetFiles()
+    public IEnumerable<(string fileName, Stream stream, long size)> GetFiles()
     {
         var files = _fileSystem.Directory.GetFiles(_path, "*.xml");
         foreach (var file in files)
         {
             var fileInfo = _fileSystem.FileInfo.FromFileName(file);
-            yield return (_fileSystem.Path.GetFileName(file).ToLowerInvariant(), fileInfo.OpenRead(),
-                (int)Math.Min(int.MaxValue, fileInfo.Length));
+            yield return (_fileSystem.Path.GetFileName(file).ToLowerInvariant(), fileInfo.OpenRead(), fileInfo.Length);
         }
     }
 
