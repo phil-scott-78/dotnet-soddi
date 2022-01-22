@@ -40,18 +40,6 @@ public class ArchiveProcessor : IArchivedDataProcessor
             }
         }
     }
-
-    public long GetTotalFileSize()
-    {
-        var sum = 0L;
-        foreach (var path in _paths)
-        {
-            using var archive = SevenZipArchive.Open(path);
-            sum += archive.TotalUncompressSize;
-        }
-
-        return sum;
-    }
 }
 
 public class FolderProcessor : IArchivedDataProcessor
@@ -73,11 +61,5 @@ public class FolderProcessor : IArchivedDataProcessor
             var fileInfo = _fileSystem.FileInfo.FromFileName(file);
             yield return (_fileSystem.Path.GetFileName(file).ToLowerInvariant(), fileInfo.OpenRead(), fileInfo.Length);
         }
-    }
-
-    public long GetTotalFileSize()
-    {
-        return _fileSystem.Directory.GetFiles(_path, "*.xml").Select(i => _fileSystem.FileInfo.FromFileName(i))
-            .Sum(i => i.Length);
     }
 }

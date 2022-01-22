@@ -11,21 +11,6 @@ public class InsertData : ITask
     private readonly Action<ImmutableDictionary<string, long>> _summaryReporter;
     private readonly int _blockSize;
 
-    // file size and rows from the aviation database to guess our way
-    // to about how far we are through a file based on it's size and number of rows
-    // we've read
-    private static readonly Dictionary<string, double> s_approxSizePerRow = new()
-    {
-        { "badges.xml", 112 },
-        { "comments.xml", 341 },
-        { "posthistory.xml", 982 },
-        { "postlinks.xml", 111 },
-        { "posts.xml", 1522 },
-        { "tags.xml", 78 },
-        { "users.xml", 447 },
-        { "votes.xml", 90 },
-    };
-
     public InsertData(string connectionString, string dbName, IArchivedDataProcessor processor,
         bool includePostTags, Action<ImmutableDictionary<string, long>> summaryReporter, int blockSize = 1024 * 1024)
     {
@@ -55,18 +40,17 @@ public class InsertData : ITask
 
             var insert = Task.Factory.StartNew(() =>
             {
-                var sizePerRow = s_approxSizePerRow[fileName];
-                var estRowsPerFile = fileSize / sizePerRow;
                 var totalBatchCount = 0L;
                 var inserter = new SqlServerBulkInserter(_connectionString, _dbName, l =>
                 {
-                    sizePerRow = (double)blockingStream.TotalBytesRead / l;
-                    estRowsPerFile = fileSize / sizePerRow;
+                    var sizePerRow = (double)blockingStream.TotalBytesRead / l;
+                    var estRowsPerFile = fileSize / sizePerRow;
                     var diff = l - totalBatchCount;
                     totalBatchCount = l;
                     fileReport.AddOrUpdate(fileName, _ => l, (_, _) => l);
                     var rowsRead = l < int.MaxValue ? Convert.ToDouble(l).ToMetric(decimals: 2) : "billions of";
-                    progress.Report((fileName, $"{fileName} ({rowsRead} rows)", diff, Math.Max(estRowsPerFile, totalBatchCount + 1)));
+                    progress.Report((fileName, $"{fileName} ({rowsRead} rows)", diff,
+                        Math.Max(estRowsPerFile, totalBatchCount + 1)));
                 });
 
                 var isPostFile = fileName.Equals("posts.xml", StringComparison.InvariantCultureIgnoreCase);

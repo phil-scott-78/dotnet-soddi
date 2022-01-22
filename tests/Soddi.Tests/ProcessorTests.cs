@@ -17,7 +17,6 @@ public class ProcessorTests
     {
         var processor = new FolderProcessor("test-files/eosio.meta.stackexchange.com/");
 
-        processor.GetTotalFileSize().ShouldBe(415_440);
         processor.GetFiles().Select(i => i.fileName)
             .ShouldBe(s_expectedFiles.Select(i => i + ".xml"));
     }
@@ -27,7 +26,6 @@ public class ProcessorTests
     {
         var processor = new ArchiveProcessor(new[] { "test-files/eosio.meta.stackexchange.com.7z" });
 
-        processor.GetTotalFileSize().ShouldBe(415_440);
         processor.GetFiles().Select(i => i.fileName)
             .ShouldBe(s_expectedFiles.Select(i => i + ".xml"));
     }
