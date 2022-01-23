@@ -39,6 +39,10 @@ public class ImportOptions : CommandSettings
     [Description("Advanced. Block size used for concurrent read/write of 7z archives.")]
     public int BlockSize { get; set; } = 1024;
 
+    [CommandOption("--sequential")]
+    [Description("Advanced. Force sequential import of files from the same 7z archive.")]
+    public bool Sequential { get; set; }
+
     public static readonly string[][] Examples =
     {
         new[] { "import", "iota" }, new[] { "import", "iota.stackexchange.co.7z", "--dropAndCreate" },
@@ -96,7 +100,7 @@ public class ImportHandler : AsyncCommand<ImportOptions>
 
         ImmutableDictionary<string, long>? insertReport = null;
 
-        var processor = _processorFactory.VerifyAndCreateProcessor(requestPath);
+        var processor = _processorFactory.VerifyAndCreateProcessor(requestPath, request.Sequential);
 
         if (request.DropAndRecreate)
         {
@@ -177,7 +181,7 @@ public class ImportHandler : AsyncCommand<ImportOptions>
         }
 
         _console.WriteLine();
-        _console.MarkupLine($"Import complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
+        _console.MarkupLine($"Import complete in [blue]{stopWatch.Elapsed.Humanize(2)}[/].");
 
         return 0;
     }

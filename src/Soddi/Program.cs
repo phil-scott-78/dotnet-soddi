@@ -13,7 +13,7 @@ const bool propagateExceptions = true;
 // args = new[] { "torrent", "space,sports,travel" };
 //args = new[] { "brent" };
 //args = new[] { "torrent", "sports" };
-args = new[] { "import", @"R:\phil-scott\dotnet-soddi\src\Soddi\stackoverflow", "--dropAndCreate" };
+args = new[] { "import", @"travel", "--dropAndCreate", "--parallel" };
 // args = new[] { "list", "-h" };
 #else
 const bool propagateExceptions = false;

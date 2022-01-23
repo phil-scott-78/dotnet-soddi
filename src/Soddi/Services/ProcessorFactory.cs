@@ -10,7 +10,7 @@ public class ProcessorFactory
         _fileSystem = fileSystem;
     }
 
-    public IArchivedDataProcessor VerifyAndCreateProcessor(string requestPath)
+    public IArchivedDataProcessor VerifyAndCreateProcessor(string requestPath, bool processSequentially = false)
     {
         if (_fileSystem.File.Exists(requestPath))
         {
@@ -22,7 +22,9 @@ public class ProcessorFactory
                 throw new SoddiException("Only 7z archive files are supported");
             }
 
-            return new ArchiveProcessor(new[] { requestPath }, _fileSystem);
+            return processSequentially
+                ? new SequentialArchiveProcessor(new[] { requestPath }, _fileSystem)
+                : new ParallelArchiveProcessor(new[] { requestPath }, _fileSystem);
         }
 
         if (!_fileSystem.Directory.Exists(requestPath))
@@ -54,7 +56,10 @@ public class ProcessorFactory
         if (sevenFiles.Length > 0)
         {
             AssertProperFiles(expectedFiles, sevenFiles, "7z");
-            return new ArchiveProcessor(sevenFiles.Select(i => i.FullName).ToArray(), _fileSystem);
+            var files = sevenFiles.Select(i => i.FullName).ToArray();
+            return processSequentially
+                ? new SequentialArchiveProcessor(files, _fileSystem)
+                : new ParallelArchiveProcessor(files, _fileSystem);
         }
 
         throw new SoddiException(

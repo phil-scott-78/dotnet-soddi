@@ -2,12 +2,47 @@
 
 namespace Soddi.Services;
 
-public class ArchiveProcessor : IArchivedDataProcessor
+public class ParallelArchiveProcessor : IArchivedDataProcessor
 {
     private readonly IFileSystem _fileSystem;
     private readonly string[] _paths;
 
-    public ArchiveProcessor(string[] paths, IFileSystem? fileSystem = null)
+    public ParallelArchiveProcessor(string[] paths, IFileSystem? fileSystem = null)
+    {
+        _paths = paths;
+        _fileSystem = fileSystem ?? new FileSystem();
+    }
+
+    public IEnumerable<IEnumerable<(string fileName, Stream stream, long size)>> GetFiles()
+    {
+        foreach (var path in _paths)
+        {
+            var allFiles = SevenZipArchive.Open(path).Entries.Select(i => i.Key);
+            foreach (var file in allFiles)
+            {
+                yield return Batch(path, file);
+            }
+        }
+
+        IEnumerable<(string fileName, Stream stream, long size)> Batch(string path, string entryFile)
+        {
+            var stream = _fileSystem.File.OpenRead(path);
+            var archive = SevenZipArchive.Open(stream);
+            var allArchiveEntries = archive.Entries.First(i => i.Key == entryFile);
+            yield return (
+                allArchiveEntries.Key.ToLowerInvariant(),
+                allArchiveEntries.OpenEntryStream(),
+                allArchiveEntries.Size);
+        }
+    }
+}
+
+public class SequentialArchiveProcessor : IArchivedDataProcessor
+{
+    private readonly IFileSystem _fileSystem;
+    private readonly string[] _paths;
+
+    public SequentialArchiveProcessor(string[] paths, IFileSystem? fileSystem = null)
     {
         _paths = paths;
         _fileSystem = fileSystem ?? new FileSystem();
