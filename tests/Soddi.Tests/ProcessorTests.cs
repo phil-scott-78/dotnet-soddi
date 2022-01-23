@@ -17,7 +17,7 @@ public class ProcessorTests
     {
         var processor = new FolderProcessor("test-files/eosio.meta.stackexchange.com/");
 
-        processor.GetFiles().Select(i => i.fileName)
+        processor.GetFiles().First().Select(i => i.fileName)
             .ShouldBe(s_expectedFiles.Select(i => i + ".xml"));
     }
 
@@ -26,7 +26,7 @@ public class ProcessorTests
     {
         var processor = new ArchiveProcessor(new[] { "test-files/eosio.meta.stackexchange.com.7z" });
 
-        processor.GetFiles().Select(i => i.fileName)
+        processor.GetFiles().First().Select(i => i.fileName)
             .ShouldBe(s_expectedFiles.Select(i => i + ".xml"));
     }
 }
