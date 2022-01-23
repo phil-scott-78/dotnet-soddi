@@ -6,8 +6,13 @@
     <LangVersion>10</LangVersion>
     <ImplicitUsings>true</ImplicitUsings>
     <TargetFramework>net6.0</TargetFramework>
+    <PackageReadmeFile>readme.md</PackageReadmeFile>
   </PropertyGroup>
 
+  <ItemGroup>
+    <None Include="..\..\readme.md" Pack="true" PackagePath="\"/>
+  </ItemGroup>
+  
   <ItemGroup>
     <PackageReference Include="Humanizer.Core" Version="2.13.14" />
     <PackageReference Include="JetBrains.Annotations" Version="2020.3.0" />
@@ -32,7 +37,7 @@
 
     <PackageOutputPath>./nupkg</PackageOutputPath>
     <GeneratePackageOnBuild>true</GeneratePackageOnBuild>
-    <Version>0.1.4</Version>
+    <Version>0.2.0</Version>
     <Authors>Phil Scott</Authors>
     <Company />
     <Description>Tool to help download and import Stack Overflow archives into SQL Server</Description>
