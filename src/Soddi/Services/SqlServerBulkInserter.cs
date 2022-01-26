@@ -25,7 +25,6 @@ public class SqlServerBulkInserter
     public void Insert(IDataReader dataReader, string fileName)
     {
         var tableName = _fileSystem.Path.GetFileNameWithoutExtension(fileName);
-
         var connBuilder = new SqlConnectionStringBuilder(_connectionString) { InitialCatalog = _dbName };
 
         var bc =
@@ -51,12 +50,22 @@ public class SqlServerBulkInserter
             _rowsCopied(args.RowsCopied);
         };
 
+        var failureCount = 0;
         var p = Policy
             .Handle<SqlException>()
             .WaitAndRetry(
                 100,
-                retryAttempt => TimeSpan.FromSeconds(Math.Pow(2, retryAttempt)),
-                (exception, span) => AnsiConsole.MarkupLine($"[red]Error[/]: {exception.Message}. Retrying in [blue]{span.Humanize()}[/]."));
+                retryAttempt => TimeSpan.FromMilliseconds(Math.Min(retryAttempt * 100, 100)),
+                (exception, span) =>
+                {
+                    bc.BatchSize = (int)(bc.BatchSize * .5);
+                    failureCount++;
+                    if (failureCount > 10)
+                    {
+                        AnsiConsole.MarkupLine($"[bold]{fileName}[/][red]{exception.Message}[/]{Environment.NewLine}Retrying in [blue]{span.Humanize()}[/] with a batch size of [cyan]{bc.BatchSize}[/].");
+                        failureCount = 0;
+                    }
+                });
 
         p.Execute(() =>
         {
