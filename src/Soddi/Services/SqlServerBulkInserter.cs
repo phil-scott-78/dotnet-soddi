@@ -31,7 +31,7 @@ public class SqlServerBulkInserter
             new SqlBulkCopy(connBuilder.ConnectionString,
                 SqlBulkCopyOptions.TableLock | SqlBulkCopyOptions.KeepIdentity)
             {
-                DestinationTableName = tableName, EnableStreaming = true, NotifyAfter = 1000, BatchSize = 1000000
+                DestinationTableName = tableName, EnableStreaming = true, NotifyAfter = 1_000, BatchSize = 50_000
             };
 
         for (var i = 0; i < dataReader.FieldCount; i++)
