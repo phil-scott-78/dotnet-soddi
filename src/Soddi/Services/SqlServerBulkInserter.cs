@@ -31,7 +31,7 @@ public class SqlServerBulkInserter
             new SqlBulkCopy(connBuilder.ConnectionString,
                 SqlBulkCopyOptions.TableLock | SqlBulkCopyOptions.KeepIdentity)
             {
-                DestinationTableName = tableName, EnableStreaming = true, NotifyAfter = 1000, BatchSize = 50000
+                DestinationTableName = tableName, EnableStreaming = true, NotifyAfter = 1000, BatchSize = 1000000
             };
 
         for (var i = 0; i < dataReader.FieldCount; i++)
@@ -45,9 +45,11 @@ public class SqlServerBulkInserter
             bc.ColumnMappings.Add(column, column);
         }
 
-        bc.SqlRowsCopied += (_, args) =>
+        long totalRowsCopied = 0;
+        bc.SqlRowsCopied += (r, args) =>
         {
-            _rowsCopied(args.RowsCopied);
+            totalRowsCopied += args.RowsCopied;
+            _rowsCopied(totalRowsCopied);
         };
 
         var failureCount = 0;
