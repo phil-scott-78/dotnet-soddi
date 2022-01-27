@@ -28,8 +28,15 @@ public class SqlServerBulkInserter
 
         using var bc = new SqlBulkCopy(connBuilder.ConnectionString, SqlBulkCopyOptions.TableLock | SqlBulkCopyOptions.KeepIdentity)
         {
-            DestinationTableName = tableName, EnableStreaming = true, NotifyAfter = 1_000
+            DestinationTableName = tableName, EnableStreaming = true, NotifyAfter = 1_000, BulkCopyTimeout = 360
         };
+
+        var bigRows = new[] { "posts.xml", "posthistory.xml", "comments.xml" };
+        if (bigRows.Any(i => i.Equals(fileName, StringComparison.InvariantCultureIgnoreCase)))
+        {
+            // these can have quite a bit of text. make sure we don't send too much at once.
+            bc.BatchSize = 500;
+        }
 
         for (var i = 0; i < dataReader.FieldCount; i++)
         {
