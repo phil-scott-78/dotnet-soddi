@@ -31,7 +31,6 @@ public class InsertData : ITask
 
         Parallel.ForEach(_processor.GetFiles(), batch =>
         {
-            var insertTasks = new List<Task>();
             foreach (var (fileName, stream, fileSize) in batch)
             {
                 // the blocking stream will let us read and write simultaneously
@@ -42,65 +41,56 @@ public class InsertData : ITask
                     blockingStream.CompleteWriting();
                 });
 
-                var insert = Task.Factory.StartNew(() =>
+
+                var totalBatchCount = 0L;
+                var inserter = new SqlServerBulkInserter(_connectionString, _dbName, l =>
                 {
-                    var totalBatchCount = 0L;
-                    var inserter = new SqlServerBulkInserter(_connectionString, _dbName, l =>
-                    {
-                        var sizePerRow = (double)blockingStream.TotalBytesRead / l;
-                        var estRowsPerFile = fileSize / sizePerRow;
-                        var diff = l - totalBatchCount;
-                        totalBatchCount = l;
-                        fileReport.AddOrUpdate(fileName, _ => l, (_, _) => l);
-                        var rowsRead = l < int.MaxValue ? Convert.ToDouble(l).ToMetric(decimals: 2) : "billions of";
-                        progress.Report((fileName, $"{fileName} ({rowsRead} rows)", diff,
-                            Math.Max(estRowsPerFile, totalBatchCount + 1)));
-                    });
-
-                    var isPostFile = fileName.Equals("posts.xml", StringComparison.InvariantCultureIgnoreCase);
-                    Task? postTagTask = null;
-                    PubSubPostTagDataReader? postTagDataReader = null;
-
-                    if (isPostFile && _includePostTags)
-                    {
-                        // if we are reading a posts.xml file and we need to generate the tags we'll launch a third
-                        // thread to bulk insert the tags as we find them. it'll use the PubSubPostTagDataReader
-                        // as the source of the data, and then in the thread that is reading posts.xml when it finds
-                        // a new row with tags it'll call an action (defined below) that adds that tag to the DataReader
-                        postTagDataReader = new PubSubPostTagDataReader();
-                        postTagTask = Task.Factory.StartNew(() =>
-                        {
-                            var postTagInserter = new SqlServerBulkInserter(_connectionString, _dbName, _ => { });
-                            postTagInserter.Insert(postTagDataReader, "PostTags.xml");
-                        });
-                    }
-
-                    var dataReader = blockingStream
-                        .AsDataReader(
-                            fileName,
-                            postAndTag => postTagDataReader?.Push(postAndTag.postId, postAndTag.tags)
-                        );
-
-                    inserter.Insert(dataReader, fileName);
-
-                    // if we have a post tag reader make sure we close it so the queue gets cleared out
-                    // then wait for it to complete
-                    postTagDataReader?.Close();
-                    postTagTask?.Wait();
-
-                    // up until this point we've been guessing at the total size
-                    // of the import so go ahead and nudge it to 100%
-                    progress.Report((fileName, fileName, fileSize, fileSize));
+                    var sizePerRow = (double)blockingStream.TotalBytesRead / l;
+                    var estRowsPerFile = fileSize / sizePerRow;
+                    var diff = l - totalBatchCount;
+                    totalBatchCount = l;
+                    fileReport.AddOrUpdate(fileName, _ => l, (_, _) => l);
+                    var rowsRead = l < int.MaxValue ? Convert.ToDouble(l).ToMetric(decimals: 2) : "billions of";
+                    progress.Report((fileName, $"{fileName} ({rowsRead} rows)", diff,
+                        Math.Max(estRowsPerFile, totalBatchCount + 1)));
                 });
 
-                // add the insertion task to be completed in the background, but make sure
-                // we wait for decryption to complete before moving on because the 7z files
-                // can't be decrypted in parallel
-                insertTasks.Add(insert);
-                decrypt.Wait();
-            }
+                var isPostFile = fileName.Equals("posts.xml", StringComparison.InvariantCultureIgnoreCase);
+                Task? postTagTask = null;
+                PubSubPostTagDataReader? postTagDataReader = null;
 
-            Task.WaitAll(insertTasks.ToArray());
+                if (isPostFile && _includePostTags)
+                {
+                    // if we are reading a posts.xml file and we need to generate the tags we'll launch a third
+                    // thread to bulk insert the tags as we find them. it'll use the PubSubPostTagDataReader
+                    // as the source of the data, and then in the thread that is reading posts.xml when it finds
+                    // a new row with tags it'll call an action (defined below) that adds that tag to the DataReader
+                    postTagDataReader = new PubSubPostTagDataReader();
+                    postTagTask = Task.Factory.StartNew(() =>
+                    {
+                        var postTagInserter = new SqlServerBulkInserter(_connectionString, _dbName, _ => { });
+                        postTagInserter.Insert(postTagDataReader, "PostTags.xml");
+                    });
+                }
+
+                var dataReader = blockingStream
+                    .AsDataReader(
+                        fileName,
+                        postAndTag => postTagDataReader?.Push(postAndTag.postId, postAndTag.tags)
+                    );
+
+                inserter.Insert(dataReader, fileName);
+
+                // if we have a post tag reader make sure we close it so the queue gets cleared out
+                // then wait for it to complete
+                postTagDataReader?.Close();
+                postTagTask?.Wait();
+                decrypt.Wait();
+
+                // up until this point we've been guessing at the total size
+                // of the import so go ahead and nudge it to 100%
+                progress.Report((fileName, fileName, fileSize, fileSize));
+            }
         });
 
 

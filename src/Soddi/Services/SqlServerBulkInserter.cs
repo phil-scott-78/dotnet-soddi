@@ -1,5 +1,4 @@
 ﻿using Microsoft.Data.SqlClient;
-using Polly;
 
 namespace Soddi.Services;
 
@@ -27,12 +26,10 @@ public class SqlServerBulkInserter
         var tableName = _fileSystem.Path.GetFileNameWithoutExtension(fileName);
         var connBuilder = new SqlConnectionStringBuilder(_connectionString) { InitialCatalog = _dbName };
 
-        var bc =
-            new SqlBulkCopy(connBuilder.ConnectionString,
-                SqlBulkCopyOptions.TableLock | SqlBulkCopyOptions.KeepIdentity)
-            {
-                DestinationTableName = tableName, EnableStreaming = true, NotifyAfter = 1_000, BatchSize = 50_000
-            };
+        using var bc = new SqlBulkCopy(connBuilder.ConnectionString, SqlBulkCopyOptions.TableLock | SqlBulkCopyOptions.KeepIdentity)
+        {
+            DestinationTableName = tableName, EnableStreaming = true, NotifyAfter = 1_000
+        };
 
         for (var i = 0; i < dataReader.FieldCount; i++)
         {
@@ -45,34 +42,11 @@ public class SqlServerBulkInserter
             bc.ColumnMappings.Add(column, column);
         }
 
-        long totalRowsCopied = 0;
-        bc.SqlRowsCopied += (r, args) =>
+        bc.SqlRowsCopied += (_, args) =>
         {
-            totalRowsCopied += args.RowsCopied;
-            _rowsCopied(totalRowsCopied);
+            _rowsCopied(args.RowsCopied);
         };
 
-        var failureCount = 0;
-        var p = Policy
-            .Handle<SqlException>()
-            .WaitAndRetry(
-                100,
-                retryAttempt => TimeSpan.FromMilliseconds(Math.Min(retryAttempt * 100, 100)),
-                (exception, span) =>
-                {
-                    bc.BatchSize = (int)(bc.BatchSize * .5);
-                    failureCount++;
-                    if (failureCount > 10)
-                    {
-                        AnsiConsole.MarkupLine($"[bold]{fileName}[/][red]{exception.Message}[/]{Environment.NewLine}Retrying in [blue]{span.Humanize()}[/] with a batch size of [cyan]{bc.BatchSize}[/].");
-                        failureCount = 0;
-                    }
-                });
-
-        p.Execute(() =>
-        {
-            bc.WriteToServer(dataReader);
-            ((IDisposable)bc).Dispose();
-        });
+        bc.WriteToServer(dataReader);
     }
 }

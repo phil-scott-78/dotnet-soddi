@@ -135,7 +135,6 @@ public class ImportHandler : AsyncCommand<ImportOptions>
                 new ProgressBarColumn(), new PercentageColumn(), new RemainingTimeColumn(),
             });
 
-
         var stopWatch = Stopwatch.StartNew();
 
         progressBar.Start(ctx =>

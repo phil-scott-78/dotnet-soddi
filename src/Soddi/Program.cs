@@ -13,7 +13,8 @@ const bool propagateExceptions = true;
 // args = new[] { "torrent", "space,sports,travel" };
 //args = new[] { "brent" };
 //args = new[] { "torrent", "sports" };
-args = new[] { "import", @"travel", "--dropAndCreate", "--parallel" };
+args = new[] { "import", @"travel", "--dropAndCreate" };
+// args = new[] { "import", @"travel", "--dropAndCreate", "--sequential" };
 // args = new[] { "list", "-h" };
 #else
 const bool propagateExceptions = false;
