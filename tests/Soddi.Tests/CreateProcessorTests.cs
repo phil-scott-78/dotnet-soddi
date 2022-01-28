@@ -39,7 +39,7 @@ public class CreateProcessorTests
 
         var processorFactory = new ProcessorFactory(mockFileSystem);
         var processor = processorFactory.VerifyAndCreateProcessor("archive.7z");
-        processor.ShouldBeOfType<SequentialArchiveProcessor>();
+        processor.ShouldBeOfType<ParallelArchiveProcessor>();
     }
 
     [Fact]
@@ -68,7 +68,7 @@ public class CreateProcessorTests
         var processorFactory = new ProcessorFactory(mockFileSystem);
 
         var processor = processorFactory.VerifyAndCreateProcessor("archive");
-        processor.ShouldBeOfType<SequentialArchiveProcessor>();
+        processor.ShouldBeOfType<ParallelArchiveProcessor>();
     }
 
 

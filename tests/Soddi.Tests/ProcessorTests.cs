@@ -17,7 +17,7 @@ public class ProcessorTests
     {
         var processor = new FolderProcessor("test-files/eosio.meta.stackexchange.com/");
 
-        processor.GetFiles().First().Select(i => i.fileName)
+        processor.GetFiles().SelectMany(i => i).Select(i => i.fileName)
             .ShouldBe(s_expectedFiles.Select(i => i + ".xml"));
     }
 
