@@ -31,12 +31,16 @@ public class SqlServerBulkInserter
             DestinationTableName = tableName, EnableStreaming = true, NotifyAfter = 1_000, BulkCopyTimeout = 360
         };
 
-        var bigRows = new[] { "posts.xml", "posthistory.xml", "comments.xml" };
-        if (bigRows.Any(i => i.Equals(fileName, StringComparison.InvariantCultureIgnoreCase)))
+        var batchSize = fileName.ToLowerInvariant() switch
         {
-            // these can have quite a bit of text. make sure we don't send too much at once.
-            bc.BatchSize = 500;
-        }
+            "posts.xml" => 100,
+            "posthistory.xml" => 100,
+            "comments.xml" => 1000,
+            _ => 10_000
+        };
+
+        bc.BatchSize = batchSize;
+        bc.NotifyAfter = batchSize;
 
         for (var i = 0; i < dataReader.FieldCount; i++)
         {
