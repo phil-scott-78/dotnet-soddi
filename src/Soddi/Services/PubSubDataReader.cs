@@ -38,7 +38,15 @@ public class PubSubPostTagDataReader : IDataReader
     public DataTable GetSchemaTable() => throw new NotImplementedException();
     public bool NextResult() => false;
     public string GetDataTypeName(int i) => throw new NotImplementedException();
-    public Type GetFieldType(int i) => throw new NotImplementedException();
+
+    public Type GetFieldType(int i) {
+        return i switch
+        {
+            0 => typeof(int),
+            1 => typeof(string),
+            _ => throw new IndexOutOfRangeException("invalid column index - " + i)
+        };
+    }
 
     // these are the things needed by SqlBulkCopy
     public string GetName(int i)
@@ -103,7 +111,7 @@ public class PubSubPostTagDataReader : IDataReader
     {
         var spin = new SpinWait();
 
-        while (IsClosed == false)
+        while (_tags.IsEmpty == false || IsClosed == false)
         {
             if (_tags.TryDequeue(out var v))
             {
@@ -128,7 +136,11 @@ public class PubSubPostTagDataReader : IDataReader
 
     public void Dispose()
     {
-        IsClosed = true;
+        if (_tags.IsEmpty == false)
+        {
+            AnsiConsole.WriteLine($"oh no, still {_tags.Count} tags to write");
+        }
+
         GC.SuppressFinalize(this);
     }
 
@@ -139,16 +151,16 @@ public class PubSubPostTagDataReader : IDataReader
             return;
         }
 
-        if (disposing)
-        {
-            IsClosed = true;
-        }
-
         _disposed = true;
     }
 
     public void Close()
     {
         Dispose();
+    }
+
+    public void NoMoreRecords()
+    {
+        IsClosed = true;
     }
 }

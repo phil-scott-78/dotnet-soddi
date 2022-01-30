@@ -31,12 +31,16 @@ public class InsertData : ITask
 
         Parallel.ForEach(_processor.GetFiles(), batch =>
         {
+            batch = batch.ToList();
+            Thread.CurrentThread.Name = $"Inserting from {string.Join(',', batch.Select(i => i.fileName))}";
             foreach (var (fileName, stream, fileSize) in batch)
             {
                 // the blocking stream will let us read and write simultaneously
                 var blockingStream = new BlockingStream(_blockSize);
                 var decrypt = Task.Factory.StartNew(() =>
                 {
+                    Thread.CurrentThread.Name = $"Decrypting {fileName}";
+                    Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
                     stream.CopyTo(blockingStream);
                     blockingStream.CompleteWriting();
                 });
@@ -68,6 +72,7 @@ public class InsertData : ITask
                     postTagDataReader = new PubSubPostTagDataReader();
                     postTagTask = Task.Factory.StartNew(() =>
                     {
+                        Thread.CurrentThread.Name = "PostTags Insert";
                         var postTagInserter = new SqlServerBulkInserter(_connectionString, _dbName, _ => { });
                         postTagInserter.Insert(postTagDataReader, "PostTags.xml");
                     });
@@ -83,9 +88,9 @@ public class InsertData : ITask
 
                 // if we have a post tag reader make sure we close it so the queue gets cleared out
                 // then wait for it to complete
-                postTagDataReader?.Close();
-                postTagTask?.Wait();
+                postTagDataReader?.NoMoreRecords();
                 decrypt.Wait();
+                postTagTask?.Wait();
 
                 // up until this point we've been guessing at the total size
                 // of the import so go ahead and nudge it to 100%
