@@ -85,7 +85,7 @@ public class XmlToDataReader<TClass> : IDataReader
         {
             for (var i = 0; i < _typeMapping.Length; i++)
             {
-                if (_typeMapping[i].Name == n)
+                if (_typeMapping[i].Name.Equals(n, StringComparison.InvariantCultureIgnoreCase))
                 {
                     return i;
                 }
