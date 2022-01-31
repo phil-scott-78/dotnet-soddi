@@ -130,33 +130,12 @@ public class PubSubPostTagDataReader : IDataReader
 
     public int RecordsAffected => 0;
 
-    private bool _disposed;
-
-    ~PubSubPostTagDataReader() => Dispose(false);
-
     public void Dispose()
     {
-        if (_tags.IsEmpty == false)
-        {
-            AnsiConsole.WriteLine($"oh no, still {_tags.Count} tags to write");
-        }
-
-        GC.SuppressFinalize(this);
-    }
-
-    private void Dispose(bool disposing)
-    {
-        if (_disposed)
-        {
-            return;
-        }
-
-        _disposed = true;
     }
 
     public void Close()
     {
-        Dispose();
     }
 
     public void NoMoreRecords()

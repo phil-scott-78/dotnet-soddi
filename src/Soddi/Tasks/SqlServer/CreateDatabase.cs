@@ -13,15 +13,15 @@ public class VerifyDatabaseExists : ITask
         _databaseName = databaseName;
     }
 
-    public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
+    public async Task GoAsync(IProgress<(string taskId, string message, double weight, double maxValue)> progress, CancellationToken cancellationToken)
     {
         var sql = $"select COUNT(*) from sys.databases where name = '{_databaseName}'";
-        using var sqlConn = new SqlConnection(_connectionString);
-        using var sqlCommand = new SqlCommand(sql, sqlConn);
+        await using var sqlConn = new SqlConnection(_connectionString);
+        await using var sqlCommand = new SqlCommand(sql, sqlConn);
 
-        sqlConn.Open();
+        await sqlConn.OpenAsync(cancellationToken);
         progress.Report(("createDb", "Creating database", GetTaskWeight() / 2, GetTaskWeight()));
-        var result = (int)sqlCommand.ExecuteScalar();
+        var result = (int)await sqlCommand.ExecuteScalarAsync(cancellationToken);
         if (result == 0)
         {
             throw new SoddiException(
@@ -46,18 +46,18 @@ public class CreateDatabase : ITask
         _databaseName = databaseName;
     }
 
-    public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
+    public async Task GoAsync(IProgress<(string taskId, string message, double weight, double maxValue)> progress, CancellationToken cancellationToken)
     {
         var statements = Sql.Replace("DummyDatabaseName", _databaseName).Split("GO");
-        using var sqlConn = new SqlConnection(_connectionString);
-        sqlConn.Open();
+        await using var sqlConn = new SqlConnection(_connectionString);
+        await sqlConn.OpenAsync(cancellationToken);
 
         var incrementValue = GetTaskWeight() / statements.Length;
         foreach (var statement in statements)
         {
             progress.Report(("createDb", "Creating database", incrementValue, GetTaskWeight()));
-            using var command = new SqlCommand(statement, sqlConn);
-            command.ExecuteNonQuery();
+            await using var command = new SqlCommand(statement, sqlConn);
+            await command.ExecuteNonQueryAsync(cancellationToken);
         }
     }
 

@@ -15,15 +15,15 @@ public class TorrentDownloader
         _console = console;
     }
 
-    public async Task<ImmutableList<string>> Download(string url,
+    public async Task<ImmutableList<string>> DownloadAsync(string url,
         bool enablePortForwarding,
         string outputPath,
         CancellationToken cancellationToken)
     {
-        return await Download(url, null, enablePortForwarding, outputPath, cancellationToken);
+        return await DownloadAsync(url, null, enablePortForwarding, outputPath, cancellationToken);
     }
 
-    public async Task<ImmutableList<string>> Download(string url,
+    public async Task<ImmutableList<string>> DownloadAsync(string url,
         List<string>? potentialArchives,
         bool enablePortForwarding,
         string outputPath,

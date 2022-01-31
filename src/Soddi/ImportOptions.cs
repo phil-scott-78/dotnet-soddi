@@ -90,7 +90,7 @@ public class ImportHandler : AsyncCommand<ImportOptions>
 
     public override async Task<int> ExecuteAsync(CommandContext context, ImportOptions request)
     {
-        var cancellationToken = CancellationToken.None;
+        var cancellationToken = new CancellationToken();
 
         var requestPath = await CheckAndFixupPath(request.Path, cancellationToken);
         var dbName = _databaseHelper.GetDbNameFromPathOption(request.DatabaseName, requestPath);
@@ -124,8 +124,7 @@ public class ImportHandler : AsyncCommand<ImportOptions>
                 dbName,
                 processor,
                 !request.SkipTags,
-                d => insertReport = d,
-                request.BlockSize)));
+                d => insertReport = d)));
 
         var progressBar = _console.Progress()
             .AutoClear(false)
@@ -137,7 +136,7 @@ public class ImportHandler : AsyncCommand<ImportOptions>
 
         var stopWatch = Stopwatch.StartNew();
 
-        progressBar.Start(ctx =>
+        await progressBar.StartAsync(async ctx =>
         {
             foreach (var (description, task) in tasks)
             {
@@ -152,7 +151,7 @@ public class ImportHandler : AsyncCommand<ImportOptions>
                     progressBarTask.Description(message);
                 });
 
-                task.Go(progress);
+                await task.GoAsync(progress, cancellationToken);
 
                 foreach (var progressTask in progressTasks.Values)
                 {

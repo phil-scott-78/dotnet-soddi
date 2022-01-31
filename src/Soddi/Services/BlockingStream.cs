@@ -14,7 +14,7 @@ public class BlockingStream : Stream
     private int _currentBlockIndex;
     private int _currentBlockLength;
 
-    public BlockingStream(int streamWriteCountCache)
+    public BlockingStream()
     {
         _blocks = new BlockingCollection<ByteWithLength>();
     }

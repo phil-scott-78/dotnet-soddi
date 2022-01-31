@@ -88,7 +88,7 @@ public class BrentHandler : AsyncCommand<BrentOptions>
             throw new SoddiException($"Output path {outputPath} not found");
         }
 
-        var downloadedFiles = await _torrentDownloader.Download(archive.Url,
+        var downloadedFiles = await _torrentDownloader.DownloadAsync(archive.Url,
             settings.EnablePortForwarding = settings.EnablePortForwarding,
             outputPath,
             CancellationToken.None);
