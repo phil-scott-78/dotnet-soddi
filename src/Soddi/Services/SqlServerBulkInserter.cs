@@ -27,6 +27,9 @@ public class SqlServerBulkInserter
     {
         var tableName = _fileSystem.Path.GetFileNameWithoutExtension(fileName);
         var connBuilder = new SqlConnectionStringBuilder(_connectionString) { InitialCatalog = _dbName };
+
+        // posts and posthistory are significantly larger due to the text content so we need
+        // to make sure their batches are smaller than the other tables. Comments we'll tweak a bit lower too.
         var batchSize = fileName.ToLowerInvariant() switch
         {
             "posts.xml" => 500,
@@ -35,13 +38,20 @@ public class SqlServerBulkInserter
             _ => 10_000
         };
 
+        // the buffered data reader will keep track of the past few batches we've written in case of failure. If we
+        // get a network glitch or timeout we don't want to have to retry, especially with some of these data sets being
+        // nearly 100gb worth of data. But if we can pause reading from the incoming stream and see which data from our
+        // buffer has been written we can hopefully get the data into a good place once we've reconnected and can start
+        // pushing data again.
         var bufferedStream = new BufferedDataReader(dataReader, batchSize);
 
         var retryPolicy = Policy
             .Handle<SqlException>()
             .WaitAndRetryForever(_ => TimeSpan.FromMilliseconds(500), (_, _, _) =>
                 {
-                    bufferedStream.Replay();
+                    // if have an exception we want to tell the buffered stream to start
+                    // replaying the buffered messages before we start reading from the incoming stream.
+                    bufferedStream.SetReplay();
                 }
             );
 
@@ -55,12 +65,12 @@ public class SqlServerBulkInserter
                 {
                     DestinationTableName = tableName,
                     EnableStreaming = true,
-                    NotifyAfter = batchSize,
-                    BulkCopyTimeout = 360
+                    BulkCopyTimeout = 360,
+                    // these two need to be equal. we rely on the NotifyAfter to fire to keep the buffer clean. ideally
+                    // there would be a different event on Batch completion but this will suffice.
+                    BatchSize = batchSize,
+                    NotifyAfter = batchSize
                 };
-
-            bc.BatchSize = batchSize;
-            bc.NotifyAfter = batchSize;
 
             for (var i = 0; i < dataReader.FieldCount; i++)
             {
@@ -75,12 +85,24 @@ public class SqlServerBulkInserter
 
             if (totalCopiedSoFar > 0)
             {
+                // if we have already copied some data that means the bulk insert failed at some point and data has been
+                // written. most of it should be commited to the database, but we are going to be in a state where we know
+                // quite what was written. We've saved the last few batched of data in the buffer for replaying, but
+                // we without being able to know which of that data is already persisted in the database we'll need to
+                // delete all of it and then reinsert to be sure.
+                //
+                // Thankfully all the tables have a simple structure so we can identify the rows that have been written
+                // pretty easily. All but the posttags use an Id field as their primary key so we can do a delete
+                // statement for the ids in the buffer. For post tags we'll need to use the composite key.
                 var keys = fileName.ToLowerInvariant() switch
                 {
                     "posttags.xml" => new[] { "postid", "tag" },
                     _ => new[] { "id" }
                 };
 
+                // before we start clearing out the buffer get the count of the records in it. we'll see if the number of
+                // rows in the buffer is the same as the number of rows we deleted. If that happens it means the server
+                // persisted a lot more data than we can recover from so we need to fail.
                 var bufferedCount = bufferedStream.GetBufferedCount();
                 var conditional = string.Join(" or ", bufferedStream.GetBufferedKeys(keys));
                 if (!string.IsNullOrWhiteSpace(conditional))
@@ -96,6 +118,8 @@ public class SqlServerBulkInserter
                 }
             }
 
+            // because we are restarting the bulk copy process and the SqlRowsCopied sends in the number of rows it has
+            // copied in its current process we need to reconcile the numbers. 
             var copiedPriorToThisBatch = totalCopiedSoFar;
             var copiedCount = 0;
             bc.SqlRowsCopied += (_, args) =>
@@ -105,7 +129,9 @@ public class SqlServerBulkInserter
                 copiedCount++;
                 if (copiedCount % 3 == 0)
                 {
-                    bufferedStream?.Clear();
+                    // this event should fire for every two batches sent to the server. We'll only keep around the past
+                    // two buffers in memory for recovery purposes and to keep memory pressure low.
+                    bufferedStream?.ClearBuffer();
                 }
             };
 
@@ -127,28 +153,11 @@ public class SqlServerBulkInserter
             _buffer = new Stack<object?[]>(batchSize);
         }
 
-        public int GetBufferedCount()
-        {
-            return _buffer.Count;
-        }
+        public int GetBufferedCount() => _buffer.Count;
 
-        public void Replay()
-        {
-            _replayFromBuffer = true;
-        }
+        public void SetReplay() => _replayFromBuffer = true;
 
-        public void Clear()
-        {
-            _buffer.Clear();
-        }
-
-        public void Close()
-        {
-        }
-
-        public void Dispose()
-        {
-        }
+        public void ClearBuffer() => _buffer.Clear();
 
         public bool Read()
         {
@@ -183,11 +192,6 @@ public class SqlServerBulkInserter
             return true;
         }
 
-        public int GetOrdinal(string name)
-        {
-            return _innerDataReader.GetOrdinal(name);
-        }
-
         public object GetValue(int i)
         {
             return _currentRow?[i] ?? throw new InvalidOperationException("Can't read from empty row");
@@ -201,6 +205,7 @@ public class SqlServerBulkInserter
         // delegate
         public int FieldCount => _innerDataReader.FieldCount;
         public DataTable? GetSchemaTable() => _innerDataReader.GetSchemaTable();
+        public int GetOrdinal(string name) => _innerDataReader.GetOrdinal(name);
         public bool NextResult() => _innerDataReader.NextResult();
         public int Depth => _innerDataReader.Depth;
         public bool IsClosed => _innerDataReader.IsClosed;
@@ -256,6 +261,14 @@ public class SqlServerBulkInserter
 
                 yield return $"({string.Join(" and ", items)})";
             }
+        }
+
+        public void Close()
+        {
+        }
+
+        public void Dispose()
+        {
         }
     }
 }
