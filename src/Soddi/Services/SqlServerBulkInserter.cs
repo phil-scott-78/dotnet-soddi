@@ -29,9 +29,9 @@ public class SqlServerBulkInserter
         var connBuilder = new SqlConnectionStringBuilder(_connectionString) { InitialCatalog = _dbName };
         var batchSize = fileName.ToLowerInvariant() switch
         {
-            "posts.xml" => 100,
-            "posthistory.xml" => 100,
-            "comments.xml" => 1000,
+            "posts.xml" => 500,
+            "posthistory.xml" => 500,
+            "comments.xml" => 2000,
             _ => 10_000
         };
 
@@ -105,7 +105,6 @@ public class SqlServerBulkInserter
                 copiedCount++;
                 if (copiedCount % 3 == 0)
                 {
-                    // ReSharper disable once AccessToDisposedClosure
                     bufferedStream?.Clear();
                 }
             };
