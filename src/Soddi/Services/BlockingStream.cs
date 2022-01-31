@@ -1,18 +1,22 @@
-﻿
+﻿// from https://stackoverflow.com/a/3729877
 
-// from https://stackoverflow.com/a/3729877
+using System.Buffers;
 
 namespace Soddi.Services;
 
 public class BlockingStream : Stream
 {
-    private readonly BlockingCollection<byte[]> _blocks;
+    record ByteWithLength(byte[] Data, int Length);
+
+    private static readonly ArrayPool<byte> s_byteArrayPool = ArrayPool<byte>.Shared;
+    private readonly BlockingCollection<ByteWithLength> _blocks;
     private byte[]? _currentBlock;
     private int _currentBlockIndex;
+    private int _currentBlockLength;
 
     public BlockingStream(int streamWriteCountCache)
     {
-        _blocks = new BlockingCollection<byte[]>(streamWriteCountCache);
+        _blocks = new BlockingCollection<ByteWithLength>();
     }
 
     public override bool CanTimeout { get { return false; } }
@@ -51,13 +55,14 @@ public class BlockingStream : Stream
         {
             if (_currentBlock != null)
             {
-                var copy = Math.Min(count - bytesRead, _currentBlock.Length - _currentBlockIndex);
+                var copy = Math.Min(count - bytesRead, _currentBlockLength - _currentBlockIndex);
                 Array.Copy(_currentBlock, _currentBlockIndex, buffer, offset + bytesRead, copy);
                 _currentBlockIndex += copy;
                 bytesRead += copy;
 
-                if (_currentBlock.Length <= _currentBlockIndex)
+                if (_currentBlockLength <= _currentBlockIndex)
                 {
+                    s_byteArrayPool.Return(_currentBlock, true);
                     _currentBlock = null;
                     _currentBlockIndex = 0;
                 }
@@ -70,8 +75,15 @@ public class BlockingStream : Stream
                 }
             }
 
-            if (!_blocks.TryTake(out _currentBlock, Timeout.Infinite))
+            if (_blocks.TryTake(out var current, Timeout.Infinite))
+            {
+                _currentBlock = current.Data;
+                _currentBlockLength = current.Length;
+            }
+            else
+            {
                 return bytesRead;
+            }
         }
     }
 
@@ -80,15 +92,20 @@ public class BlockingStream : Stream
     {
         ValidateBufferArgs(buffer, offset, count);
 
-        var newBuf = new byte[count];
+        var newBuf = s_byteArrayPool.Rent(count);
         Array.Copy(buffer, offset, newBuf, 0, count);
-        _blocks.Add(newBuf);
+        _blocks.Add(new ByteWithLength(newBuf, count));
         TotalBytesWritten += count;
         WriteCount++;
     }
 
     protected override void Dispose(bool disposing)
     {
+        if (_currentBlock != null)
+        {
+            s_byteArrayPool.Return(_currentBlock, true);
+        }
+
         base.Dispose(disposing);
         if (disposing)
         {
