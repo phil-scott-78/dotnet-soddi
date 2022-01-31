@@ -41,7 +41,7 @@ public class DownloadHandler : AsyncCommand<DownloadOptions>
 
     public override async Task<int> ExecuteAsync(CommandContext context, DownloadOptions request)
     {
-        var cancellationToken = CancellationToken.None;
+        var cancellationToken = new CancellationToken();
 
         var outputPath = request.Output;
         if (string.IsNullOrWhiteSpace(outputPath))

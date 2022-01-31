@@ -1,5 +1,4 @@
-﻿using System.Buffers;
-using Microsoft.Data.SqlClient;
+﻿using Microsoft.Data.SqlClient;
 using Polly;
 
 namespace Soddi.Services;
@@ -23,7 +22,7 @@ public class SqlServerBulkInserter
         _fileSystem = fileSystem ?? new FileSystem();
     }
 
-    public void Insert(IDataReader dataReader, string fileName)
+    public async Task InsertAsync(IDataReader dataReader, string fileName, CancellationToken cancellationToken)
     {
         var tableName = _fileSystem.Path.GetFileNameWithoutExtension(fileName);
         var connBuilder = new SqlConnectionStringBuilder(_connectionString) { InitialCatalog = _dbName };
@@ -47,7 +46,7 @@ public class SqlServerBulkInserter
 
         var retryPolicy = Policy
             .Handle<SqlException>()
-            .WaitAndRetryForever(_ => TimeSpan.FromMilliseconds(500), (_, _, _) =>
+            .WaitAndRetryForeverAsync(_ => TimeSpan.FromMilliseconds(500), (_, _, _) =>
                 {
                     // if have an exception we want to tell the buffered stream to start
                     // replaying the buffered messages before we start reading from the incoming stream.
@@ -56,10 +55,10 @@ public class SqlServerBulkInserter
             );
 
         long totalCopiedSoFar = 0;
-        retryPolicy.Execute(() =>
+        await retryPolicy.ExecuteAsync(async () =>
         {
-            using var sqlConn = new SqlConnection(connBuilder.ConnectionString);
-            sqlConn.Open();
+            await using var sqlConn = new SqlConnection(connBuilder.ConnectionString);
+            await sqlConn.OpenAsync(cancellationToken);
             using var bc =
                 new SqlBulkCopy(sqlConn, SqlBulkCopyOptions.TableLock | SqlBulkCopyOptions.KeepIdentity, null)
                 {
@@ -109,7 +108,7 @@ public class SqlServerBulkInserter
                 {
                     var sql = $"DELETE FROM [{tableName}] WHERE {conditional}";
                     var sqlCommand = new SqlCommand(sql, sqlConn);
-                    var rows = sqlCommand.ExecuteNonQuery();
+                    var rows = await sqlCommand.ExecuteNonQueryAsync(cancellationToken);
                     if (rows == bufferedCount)
                     {
                         throw new InvalidOperationException(
@@ -119,7 +118,7 @@ public class SqlServerBulkInserter
             }
 
             // because we are restarting the bulk copy process and the SqlRowsCopied sends in the number of rows it has
-            // copied in its current process we need to reconcile the numbers. 
+            // copied in its current process we need to reconcile the numbers.
             var copiedPriorToThisBatch = totalCopiedSoFar;
             var copiedCount = 0;
             bc.SqlRowsCopied += (_, args) =>
@@ -131,12 +130,14 @@ public class SqlServerBulkInserter
                 {
                     // this event should fire for every two batches sent to the server. We'll only keep around the past
                     // two buffers in memory for recovery purposes and to keep memory pressure low.
-                    bufferedStream?.ClearBuffer();
+                    bufferedStream.ClearBuffer();
                 }
             };
 
-            bc.WriteToServer(bufferedStream);
+            await bc.WriteToServerAsync(bufferedStream, cancellationToken);
             dataReader.Close();
+
+            return Task.CompletedTask;
         });
     }
 

@@ -11,14 +11,14 @@ public class InsertTypeValues : ITask
         _connectionString = connectionString;
     }
 
-    public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
+    public async Task GoAsync(IProgress<(string taskId, string message, double weight, double maxValue)> progress, CancellationToken cancellationToken)
     {
-        using var sqlConn = new SqlConnection(_connectionString);
-        using var command = new SqlCommand(Sql, sqlConn);
+        await using var sqlConn = new SqlConnection(_connectionString);
+        await using var command = new SqlCommand(Sql, sqlConn);
 
-        sqlConn.Open();
+        await sqlConn.OpenAsync(cancellationToken);
         progress.Report(("insertValues", "Inserting type values", GetTaskWeight() / 2, GetTaskWeight()));
-        command.ExecuteNonQuery();
+        await command.ExecuteNonQueryAsync(cancellationToken);
     }
 
     public double GetTaskWeight()

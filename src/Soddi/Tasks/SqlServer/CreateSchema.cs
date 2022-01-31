@@ -13,38 +13,38 @@ public class CreateSchema : ITask
         _includePostTags = includePostTags;
     }
 
-    public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
+    public async Task GoAsync(IProgress<(string taskId, string message, double weight, double maxValue)> progress, CancellationToken cancellationToken)
     {
-        CheckIfAlreadyExists();
+        await CheckIfAlreadyExists(cancellationToken);
 
         var statements = Sql.Split("GO");
-        using var sqlConn = new SqlConnection(_connectionString);
-        sqlConn.Open();
+        await using var sqlConn = new SqlConnection(_connectionString);
+        await sqlConn.OpenAsync(cancellationToken);
 
         var incrementValue = GetTaskWeight() / statements.Length;
 
         foreach (var statement in statements)
         {
-            using var command = new SqlCommand(statement, sqlConn);
-            command.ExecuteNonQuery();
+            await using var command = new SqlCommand(statement, sqlConn);
+            await command.ExecuteNonQueryAsync(cancellationToken);
             progress.Report(("createSchema", "Creating objects", incrementValue, GetTaskWeight()));
         }
     }
 
-    private void CheckIfAlreadyExists()
+    private async Task CheckIfAlreadyExists(CancellationToken cancellationToken)
     {
         var sql = @"SELECT TABLE_NAME
     FROM INFORMATION_SCHEMA.TABLES 
     WHERE TABLE_SCHEMA = 'dbo' 
     AND  TABLE_NAME in ('Badges', 'Comments', 'LinkTypes', 'PostHistory', 'PostHistoryTypes', 'PostLinks', 'Posts', 'PostTypes', 'Tags', 'Users', 'Votes', 'VoteTypes')";
 
-        using var sqlConn = new SqlConnection(_connectionString);
-        sqlConn.Open();
-        using var sqlCommand = new SqlCommand(sql, sqlConn);
+        await using var sqlConn = new SqlConnection(_connectionString);
+        await sqlConn.OpenAsync(cancellationToken);
+        await using var sqlCommand = new SqlCommand(sql, sqlConn);
 
         var tablesThatAlreadyExist = new List<string>();
-        using var dr = sqlCommand.ExecuteReader();
-        while (dr.Read())
+        var dr = await sqlCommand.ExecuteReaderAsync(cancellationToken);
+        while (await dr.ReadAsync(cancellationToken))
         {
             tablesThatAlreadyExist.Add(dr.GetString(0));
         }

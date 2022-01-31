@@ -9,41 +9,39 @@ public class InsertData : ITask
     private readonly IArchivedDataProcessor _processor;
     private readonly bool _includePostTags;
     private readonly Action<ImmutableDictionary<string, long>> _summaryReporter;
-    private readonly int _blockSize;
 
     public InsertData(string connectionString, string dbName, IArchivedDataProcessor processor,
-        bool includePostTags, Action<ImmutableDictionary<string, long>> summaryReporter, int blockSize = 1024 * 1024)
+        bool includePostTags, Action<ImmutableDictionary<string, long>> summaryReporter)
     {
         _connectionString = connectionString;
         _dbName = dbName;
         _processor = processor;
         _includePostTags = includePostTags;
         _summaryReporter = summaryReporter;
-        _blockSize = blockSize;
     }
 
-    public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
+    public async Task GoAsync(IProgress<(string taskId, string message, double weight, double maxValue)> progress, CancellationToken cancellationToken)
     {
         // keep a list of the insertion tasks. we want to move on to reading
         // as quick as possible as the backlog of inserts is taking care of
 
         var fileReport = new ConcurrentDictionary<string, long>();
 
-        Parallel.ForEach(_processor.GetFiles(), batch =>
+        await Parallel.ForEachAsync(_processor.GetFiles(), cancellationToken, async (batch, token) =>
         {
             batch = batch.ToList();
             Thread.CurrentThread.Name = $"Inserting from {string.Join(',', batch.Select(i => i.fileName))}";
             foreach (var (fileName, stream, fileSize) in batch)
             {
                 // the blocking stream will let us read and write simultaneously
-                var blockingStream = new BlockingStream(_blockSize);
+                var blockingStream = new BlockingStream();
                 var decrypt = Task.Factory.StartNew(() =>
                 {
                     Thread.CurrentThread.Name = $"Decrypting {fileName}";
                     Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
                     stream.CopyTo(blockingStream);
                     blockingStream.CompleteWriting();
-                });
+                }, token);
 
 
                 var totalBatchCount = 0L;
@@ -70,12 +68,12 @@ public class InsertData : ITask
                     // as the source of the data, and then in the thread that is reading posts.xml when it finds
                     // a new row with tags it'll call an action (defined below) that adds that tag to the DataReader
                     postTagDataReader = new PubSubPostTagDataReader();
-                    postTagTask = Task.Factory.StartNew(() =>
+                    postTagTask = Task.Factory.StartNew(async () =>
                     {
                         Thread.CurrentThread.Name = "PostTags Insert";
                         var postTagInserter = new SqlServerBulkInserter(_connectionString, _dbName, _ => { });
-                        postTagInserter.Insert(postTagDataReader, "PostTags.xml");
-                    });
+                        await postTagInserter.InsertAsync(postTagDataReader, "PostTags.xml", cancellationToken);
+                    }, cancellationToken);
                 }
 
                 var dataReader = blockingStream
@@ -84,20 +82,22 @@ public class InsertData : ITask
                         postAndTag => postTagDataReader?.Push(postAndTag.postId, postAndTag.tags)
                     );
 
-                inserter.Insert(dataReader, fileName);
+                await inserter.InsertAsync(dataReader, fileName, cancellationToken);
 
                 // if we have a post tag reader make sure we close it so the queue gets cleared out
                 // then wait for it to complete
                 postTagDataReader?.NoMoreRecords();
-                decrypt.Wait();
-                postTagTask?.Wait();
+                await decrypt.WaitAsync(cancellationToken);
+                if (postTagTask != null)
+                {
+                    await postTagTask.WaitAsync(cancellationToken);
+                }
 
                 // up until this point we've been guessing at the total size
                 // of the import so go ahead and nudge it to 100%
                 progress.Report((fileName, fileName, fileSize, fileSize));
             }
         });
-
 
         _summaryReporter(fileReport.ToImmutableDictionary());
     }

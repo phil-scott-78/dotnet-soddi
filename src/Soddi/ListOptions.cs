@@ -30,7 +30,7 @@ public class ListHandler : AsyncCommand<ListOptions>
 
     public override async Task<int> ExecuteAsync(CommandContext context, ListOptions request)
     {
-        var cancellationToken = CancellationToken.None;
+        var cancellationToken = new CancellationToken();
 
         var pattern = request.Pattern ?? "";
         var results = await _availableArchiveParser.Get(cancellationToken);

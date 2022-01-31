@@ -46,7 +46,7 @@ public class TorrentHandler : AsyncCommand<TorrentOptions>
 
     public override async Task<int> ExecuteAsync(CommandContext context, TorrentOptions request)
     {
-        var cancellationToken = CancellationToken.None;
+        var cancellationToken = new CancellationToken();
 
         var outputPath = request.Output;
         if (string.IsNullOrWhiteSpace(outputPath))
@@ -80,7 +80,7 @@ public class TorrentHandler : AsyncCommand<TorrentOptions>
 
         const string Url = "https://archive.org/download/stackexchange/stackexchange_archive.torrent";
 
-        await _torrentDownloader.Download(Url, potentialArchives, request.EnablePortForwarding, outputPath,
+        await _torrentDownloader.DownloadAsync(Url, potentialArchives, request.EnablePortForwarding, outputPath,
             cancellationToken);
         return await Task.FromResult(0);
     }

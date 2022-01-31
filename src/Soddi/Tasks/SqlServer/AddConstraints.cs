@@ -11,20 +11,20 @@ public class AddConstraints : ITask
         _connectionString = connectionString;
     }
 
-    public void Go(IProgress<(string taskId, string message, double weight, double maxValue)> progress)
+    public async Task GoAsync(IProgress<(string taskId, string message, double weight, double maxValue)> progress, CancellationToken cancellationToken)
     {
         progress.Report(("add-constraints", "Adding constraints", 0, GetTaskWeight()));
         var statements = Sql.Split("GO");
-        using var sqlConn = new SqlConnection(_connectionString);
-        sqlConn.Open();
+        await using var sqlConn = new SqlConnection(_connectionString);
+        await sqlConn.OpenAsync(cancellationToken);
 
 
         var taskIncrement = GetTaskWeight() / statements.Length;
         foreach (var statement in statements)
         {
             progress.Report(("add-constraints", "Adding constraints", taskIncrement, GetTaskWeight()));
-            using var command = new SqlCommand(statement, sqlConn) { CommandTimeout = 3600 };
-            command.ExecuteNonQuery();
+            await using var command = new SqlCommand(statement, sqlConn) { CommandTimeout = 3600 };
+            await command.ExecuteNonQueryAsync(cancellationToken);
         }
     }
 
