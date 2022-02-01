@@ -1,5 +1,4 @@
-﻿using System.Globalization;
-using Soddi.Services;
+﻿using Soddi.Services;
 
 namespace Soddi;
 
@@ -35,7 +34,7 @@ public class ListHandler : AsyncCommand<ListOptions>
         var pattern = request.Pattern ?? "";
         var results = await _availableArchiveParser.Get(cancellationToken);
 
-        var table = new Table { Border = TableBorder.Rounded, Expand = true };
+        var table = new Table().NoBorder().Expand().HideHeaders();
         table.AddColumn(new TableColumn("Short Name"));
         table.AddColumn(new TableColumn("Archive"));
 
@@ -58,7 +57,8 @@ public class ListHandler : AsyncCommand<ListOptions>
 
             foreach (var archiveUri in archive.Uris)
             {
-                innerTable.AddRow(new Markup($"[link={archiveUri.Uri}]{archiveUri.Uri}[/]"),
+                var filename = archiveUri.Uri.AbsolutePath.Replace("/download/stackexchange/", "");
+                innerTable.AddRow(new Markup($"[link={archiveUri.Uri}]{filename}[/]"),
                     new Text(archiveUri.SizeInBytes.BytesToString()));
             }
 
@@ -73,26 +73,8 @@ public class ListHandler : AsyncCommand<ListOptions>
 
 public static class FileSizeHelper
 {
-    public static string KiloBytesToString(this int kiloByteCount)
-    {
-        return BytesToString(kiloByteCount * 1024L);
-    }
-
-    public static string KiloBytesToString(this double kbCount)
-    {
-        return ((long)kbCount * 1024).BytesToString();
-    }
-
     public static string BytesToString(this long byteCount)
     {
-        // from https://stackoverflow.com/a/4975942
-        string[] suf = { "B", "KB", "MB", "GB", "TB", "PB", "EB" }; //Longs run out around EB
-        if (byteCount == 0)
-            return "0" + suf[0];
-
-        var bytes = Math.Abs(byteCount);
-        var place = Convert.ToInt32(Math.Floor(Math.Log(bytes, 1024)));
-        var num = Math.Round(bytes / Math.Pow(1024, place), 1);
-        return (Math.Sign(byteCount) * num).ToString(CultureInfo.InvariantCulture) + suf[place];
+        return byteCount.Bytes().ToString();
     }
 }

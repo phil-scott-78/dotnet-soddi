@@ -91,7 +91,7 @@ public class DownloadHandler : AsyncCommand<DownloadOptions>
                         );
 
                         var downloader = new ArchiveDownloader(outputPath, progress);
-                        await downloader.Go(uriWithSize.Uri, cancellationToken);
+                        await downloader.GoAsync(uriWithSize.Uri, cancellationToken);
                     }
                 }
             });

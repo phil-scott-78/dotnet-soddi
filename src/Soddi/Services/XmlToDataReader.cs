@@ -111,6 +111,7 @@ public class XmlToDataReader<TClass> : IDataReader
         if (!(XNode.ReadFrom(_xmlReader) is XElement el)) return false;
 
         _currentRowElement = el;
+        RecordsAffected++;
 
         // if we aren't a post record or have nothing to publish then we are done and can return
         // true to indicate there is a row ready to be read
@@ -133,7 +134,7 @@ public class XmlToDataReader<TClass> : IDataReader
 
     public int Depth => 0;
     public bool IsClosed => false;
-    public int RecordsAffected => 0;
+    public int RecordsAffected { get; private set; }
 
     public void Dispose()
     {

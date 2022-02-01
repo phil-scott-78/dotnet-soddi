@@ -14,16 +14,16 @@ public class ArchiveDownloader
         _fileSystem = fileSystem ?? new FileSystem();
     }
 
-    public async Task Go(Uri uri, CancellationToken cancellationToken)
+    public async Task GoAsync(Uri uri, CancellationToken cancellationToken)
     {
         var filename = _fileSystem.Path.Combine(_outputPath, _fileSystem.Path.GetFileName(uri.LocalPath));
 
         var client = new HttpClient();
-        using var response =
-            await client.GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
+        using var response = await client
+            .GetAsync(uri, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         response.EnsureSuccessStatusCode();
 
-        await using var contentStream = await response.Content.ReadAsStreamAsync();
+        await using var contentStream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
         var allReadsInBytes = (int)(response.Content.Headers.ContentLength ?? 0);
 
@@ -32,20 +32,17 @@ public class ArchiveDownloader
         var buffer = new byte[BufferSize];
         var isMoreToRead = true;
 
-        await using var fileStream = _fileSystem.FileStream.Create(filename, FileMode.Create, FileAccess.Write,
-            FileShare.None, BufferSize, true);
+        await using var fileStream = _fileSystem
+            .FileStream
+            .Create(filename, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, true);
 
         do
         {
-            var read = await contentStream
-                .ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken)
-                .ConfigureAwait(false);
+            var read = await contentStream.ReadAsync(buffer.AsMemory(0, buffer.Length), cancellationToken);
 
             if (read != 0)
             {
-                await fileStream
-                    .WriteAsync(buffer.AsMemory(0, read), cancellationToken)
-                    .ConfigureAwait(false);
+                await fileStream.WriteAsync(buffer.AsMemory(0, read), cancellationToken);
 
                 _progress.Report((read, allReadsInBytes));
             }

@@ -50,6 +50,8 @@ public class ImportOptions : CommandSettings
     };
 }
 
+record ImportSummary(long XmlRowsRead, long CountFromDb);
+
 public class ImportHandler : AsyncCommand<ImportOptions>
 {
     private readonly AvailableArchiveParser _availableArchiveParser;
@@ -98,7 +100,7 @@ public class ImportHandler : AsyncCommand<ImportOptions>
         var (masterConnectionString, databaseConnectionString) =
             _databaseHelper.GetMasterAndDbConnectionStrings(request.ConnectionString, dbName);
 
-        ImmutableDictionary<string, long>? insertReport = null;
+        var report = new ConcurrentDictionary<string, ImportSummary>();
 
         var processor = _processorFactory.VerifyAndCreateProcessor(requestPath, request.Sequential);
 
@@ -123,16 +125,18 @@ public class ImportHandler : AsyncCommand<ImportOptions>
                 databaseConnectionString,
                 dbName,
                 processor,
-                !request.SkipTags,
-                d => insertReport = d)));
+                !request.SkipTags, (filename, count) => { report.TryAdd(_fileSystem.Path.GetFileNameWithoutExtension(filename), new ImportSummary(count, 0)); })));
+
+        tasks.Enqueue(("Check DB Status", new CheckCounts(
+            databaseConnectionString,
+            (filename, count) => report.AddOrUpdate(filename,
+                _ => new ImportSummary(0, count),
+                (_, summary) => summary with { CountFromDb = count }))));
 
         var progressBar = _console.Progress()
             .AutoClear(false)
-            .Columns(new ProgressColumn[]
-            {
-                new SpinnerColumn { CompletedText = Emoji.Known.CheckMark }, new FixedTaskDescriptionColumn(40),
-                new ProgressBarColumn(), new PercentageColumn(), new RemainingTimeColumn(),
-            });
+            .Columns(new SpinnerColumn { CompletedText = Emoji.Known.CheckMark }, new FixedTaskDescriptionColumn(40),
+                new ProgressBarColumn(), new PercentageColumn(), new RemainingTimeColumn());
 
         var stopWatch = Stopwatch.StartNew();
 
@@ -162,20 +166,39 @@ public class ImportHandler : AsyncCommand<ImportOptions>
 
         stopWatch.Stop();
 
-        if (insertReport != null)
-        {
-            var counter = 1;
-            var chart = new BreakdownChart()
-                .Compact()
-                .Width(60)
-                .UseValueFormatter(d => d.ToMetric())
-                .FullSize()
-                .AddItems(insertReport,
-                    pair => new BreakdownChartItem(pair.Key, pair.Value, counter++)
-                );
+        var counter = 1;
+        var chart = new BreakdownChart()
+            .Compact()
+            .Width(60)
+            .UseValueFormatter(d => d.ToMetric())
+            .FullSize()
+            .AddItems(report,
+                pair => new BreakdownChartItem(pair.Key, pair.Value.CountFromDb, counter++)
+            );
 
-            _console.MarkupLine("[blue]Rows inserted[/]");
-            _console.Write(chart);
+        _console.MarkupLine("[blue]Rows inserted[/]");
+        _console.Write(chart);
+
+        if (report.Any(i => i.Value.CountFromDb != i.Value.XmlRowsRead))
+        {
+            var table = new Table()
+                .RoundedBorder()
+                .AddColumns("File", "XML Rows Read", "Count from DB");
+
+            foreach (var (key, (xmlRowsRead, countFromDb)) in report)
+            {
+                var style = xmlRowsRead != countFromDb ? new Style(Color.Red) : Style.Plain;
+
+                table.AddRow(
+                    new Text(key),
+                    new Text(xmlRowsRead.ToString()),
+                    new Markup(countFromDb.ToString(), style)
+                );
+            }
+
+            _console.WriteLine();
+            _console.MarkupLine("[red]Mismatch Row Count[/]");
+            _console.Write(table);
         }
 
         _console.WriteLine();
