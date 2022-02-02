@@ -20,15 +20,10 @@ public class CheckCounts : ITask
         progress.Report((TaskId, "Checking validity", 0, 1));
         var tables = new[] { "tags", "badges", "postlinks", "users", "comments", "posts", "votes", "posthistory" };
 
-        var counter = 0;
-        var fileNamesCount = tables.Length;
-
         foreach (var table in tables)
         {
-            progress.Report((TaskId, $"Checking validity ({table}) ", counter, fileNamesCount));
             var count = await GetCountFromDbAsync(table, cancellationToken);
             _setResult(table, count);
-            counter++;
         }
     }
 

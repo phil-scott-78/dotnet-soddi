@@ -27,19 +27,16 @@ public class InsertData : ITask
         await Parallel.ForEachAsync(_processor.GetFiles(), cancellationToken, async (batch, token) =>
         {
             batch = batch.ToList();
-            Thread.CurrentThread.Name = $"Inserting from {string.Join(',', batch.Select(i => i.fileName))}";
             foreach (var (fileName, stream, fileSize) in batch)
             {
                 // the blocking stream will let us read and write simultaneously
                 var blockingStream = new BlockingStream();
                 var decrypt = Task.Factory.StartNew(() =>
                 {
-                    Thread.CurrentThread.Name = $"Decrypting {fileName}";
                     Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
                     stream.CopyTo(blockingStream);
                     blockingStream.CompleteWriting();
                 }, token);
-
 
                 var totalBatchCount = 0L;
                 var inserter = new SqlServerBulkInserter(_connectionString, _dbName, l =>
@@ -64,12 +61,8 @@ public class InsertData : ITask
                     // as the source of the data, and then in the thread that is reading posts.xml when it finds
                     // a new row with tags it'll call an action (defined below) that adds that tag to the DataReader
                     postTagDataReader = new PubSubPostTagDataReader();
-                    postTagTask = Task.Factory.StartNew(async () =>
-                    {
-                        Thread.CurrentThread.Name = "PostTags Insert";
-                        var postTagInserter = new SqlServerBulkInserter(_connectionString, _dbName, _ => { });
-                        await postTagInserter.InsertAsync(postTagDataReader, "PostTags.xml", cancellationToken);
-                    }, cancellationToken);
+                    var postTagInserter = new SqlServerBulkInserter(_connectionString, _dbName, _ => { });
+                    postTagTask = postTagInserter.InsertAsync(postTagDataReader, "PostTags.xml", cancellationToken);
                 }
 
                 var dataReader = blockingStream

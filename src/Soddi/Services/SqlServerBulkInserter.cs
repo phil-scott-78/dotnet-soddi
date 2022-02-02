@@ -34,6 +34,7 @@ public class SqlServerBulkInserter
             "posts.xml" => 500,
             "posthistory.xml" => 500,
             "comments.xml" => 2000,
+            "posttags.xml" => 1000,
             _ => 10_000
         };
 
@@ -59,17 +60,16 @@ public class SqlServerBulkInserter
         {
             await using var sqlConn = new SqlConnection(connBuilder.ConnectionString);
             await sqlConn.OpenAsync(cancellationToken);
-            using var bc =
-                new SqlBulkCopy(sqlConn, SqlBulkCopyOptions.TableLock | SqlBulkCopyOptions.KeepIdentity, null)
-                {
-                    DestinationTableName = tableName,
-                    EnableStreaming = true,
-                    BulkCopyTimeout = 360,
-                    // these two need to be equal. we rely on the NotifyAfter to fire to keep the buffer clean. ideally
-                    // there would be a different event on Batch completion but this will suffice.
-                    BatchSize = batchSize,
-                    NotifyAfter = batchSize
-                };
+            using var bc = new SqlBulkCopy(sqlConn, SqlBulkCopyOptions.TableLock | SqlBulkCopyOptions.KeepIdentity, null)
+            {
+                DestinationTableName = tableName,
+                EnableStreaming = true,
+                BulkCopyTimeout = 360,
+                // these two need to be equal. we rely on the NotifyAfter to fire to keep the buffer clean. ideally
+                // there would be a different event on Batch completion but this will suffice.
+                BatchSize = batchSize,
+                NotifyAfter = batchSize
+            };
 
             for (var i = 0; i < dataReader.FieldCount; i++)
             {
@@ -99,71 +99,53 @@ public class SqlServerBulkInserter
                     _ => new[] { "id" }
                 };
 
-                // before we start clearing out the buffer get the count of the records in it. we'll see if the number of
-                // rows in the buffer is the same as the number of rows we deleted. If that happens it means the server
-                // persisted a lot more data than we can recover from so we need to fail.
-                var bufferedCount = bufferedStream.GetBufferedCount();
-                var conditional = string.Join(" or ", bufferedStream.GetBufferedKeys(keys));
-                if (!string.IsNullOrWhiteSpace(conditional))
+                var sequence = bufferedStream.GetBufferedKeys(keys).ToList();
+                while (sequence.Any())
                 {
+                    var batch = sequence.Take(100);
+                    var conditional = string.Join(" or ", batch);
                     var sql = $"DELETE FROM [{tableName}] WHERE {conditional}";
-                    var sqlCommand = new SqlCommand(sql, sqlConn);
-                    var rows = await sqlCommand.ExecuteNonQueryAsync(cancellationToken);
-                    if (rows == bufferedCount)
-                    {
-                        throw new InvalidOperationException(
-                            "All buffered data was in the database already. No way to recover.");
-                    }
+                    await using var sqlCommand = new SqlCommand(sql, sqlConn);
+                    await sqlCommand.ExecuteNonQueryAsync(cancellationToken);
+                    sequence = sequence.Skip(100).ToList();
                 }
             }
 
             // because we are restarting the bulk copy process and the SqlRowsCopied sends in the number of rows it has
             // copied in its current process we need to reconcile the numbers.
             var copiedPriorToThisBatch = totalCopiedSoFar;
-            var copiedCount = 0;
             bc.SqlRowsCopied += (_, args) =>
             {
                 totalCopiedSoFar = copiedPriorToThisBatch + args.RowsCopied;
                 _rowsCopied(totalCopiedSoFar);
-                copiedCount++;
-                if (copiedCount % 3 == 0)
-                {
-                    // this event should fire for every two batches sent to the server. We'll only keep around the past
-                    // two buffers in memory for recovery purposes and to keep memory pressure low.
-                    bufferedStream.ClearBuffer();
-                }
             };
 
             await bc.WriteToServerAsync(bufferedStream, cancellationToken);
             dataReader.Close();
-
-            return Task.CompletedTask;
         });
     }
 
     private class BufferedDataReader : IDataReader
     {
         private readonly IDataReader _innerDataReader;
-        private readonly Stack<object?[]> _buffer;
+        private readonly Queue<object?[]> _buffer;
         private bool _replayFromBuffer;
         private object?[]? _currentRow;
+        private readonly int _maxBuffer;
 
         public BufferedDataReader(IDataReader innerDataReader, int batchSize)
         {
             _innerDataReader = innerDataReader;
-            _buffer = new Stack<object?[]>(batchSize);
+            _buffer = new Queue<object?[]>(batchSize);
+            _maxBuffer = batchSize * 5;
         }
 
-        public int GetBufferedCount() => _buffer.Count;
-
         public void SetReplay() => _replayFromBuffer = true;
-
-        public void ClearBuffer() => _buffer.Clear();
 
         public bool Read()
         {
             // if we are replaying then grab the next row and make it the current row.
-            if (_replayFromBuffer && _buffer.TryPop(out _currentRow))
+            if (_replayFromBuffer && _buffer.TryDequeue(out _currentRow))
             {
                 return true;
             }
@@ -187,7 +169,12 @@ public class SqlServerBulkInserter
                     : _innerDataReader.GetValue(i);
             }
 
-            _buffer.Push(newRow);
+            if (_buffer.Count > _maxBuffer)
+            {
+                _buffer.TryDequeue(out _);
+            }
+
+            _buffer.Enqueue(newRow);
             _currentRow = newRow;
 
             return true;
