@@ -5,7 +5,7 @@ using SharpCompress.Common;
 namespace Soddi;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-public class BrentOptions : CommandSettings
+public class BrentOptions : BaseLoggingOptions
 {
     [CommandArgument(0, "[ARCHIVE_NAME]")]
     [Description("Archive to download")]

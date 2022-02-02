@@ -46,9 +46,10 @@ public class SqlServerBulkInserter
         var bufferedStream = new BufferedDataReader(dataReader, batchSize);
 
         var retryPolicy = Policy
-            .Handle<SqlException>()
-            .WaitAndRetryForeverAsync(_ => TimeSpan.FromMilliseconds(500), (_, _, _) =>
+            .Handle<SqlException>().Or<InvalidOperationException>(exception => exception.Message.Contains("connection is closed."))
+            .WaitAndRetryForeverAsync(_ => TimeSpan.FromMilliseconds(500), (ex, _, _) =>
                 {
+                    Log.Write(LogLevel.Trace, $"Exception occured, but we'll retry. {ex.Message}");
                     // if have an exception we want to tell the buffered stream to start
                     // replaying the buffered messages before we start reading from the incoming stream.
                     bufferedStream.SetReplay();
@@ -84,6 +85,7 @@ public class SqlServerBulkInserter
 
             if (totalCopiedSoFar > 0)
             {
+                Log.Write(LogLevel.Trace, $"Reconciling buffer for {tableName}.");
                 // if we have already copied some data that means the bulk insert failed at some point and data has been
                 // written. most of it should be commited to the database, but we are going to be in a state where we know
                 // quite what was written. We've saved the last few batched of data in the buffer for replaying, but
@@ -100,14 +102,20 @@ public class SqlServerBulkInserter
                 };
 
                 var sequence = bufferedStream.GetBufferedKeys(keys).ToList();
+                if (sequence.Count > 0)
+                {
+                    Log.Write(LogLevel.Trace, $"Clearing DB for {tableName} of {sequence.Count} buffered values.");
+                }
+
                 while (sequence.Any())
                 {
-                    var batch = sequence.Take(100);
+                    var batch = sequence.Take(1000).ToList();
                     var conditional = string.Join(" or ", batch);
                     var sql = $"DELETE FROM [{tableName}] WHERE {conditional}";
                     await using var sqlCommand = new SqlCommand(sql, sqlConn);
-                    await sqlCommand.ExecuteNonQueryAsync(cancellationToken);
-                    sequence = sequence.Skip(100).ToList();
+                    var result = await sqlCommand.ExecuteNonQueryAsync(cancellationToken);
+                    Log.Write(LogLevel.Trace, $"Deleted {result} from {tableName}.");
+                    sequence = sequence.Skip(1000).ToList();
                 }
             }
 
@@ -119,6 +127,11 @@ public class SqlServerBulkInserter
                 totalCopiedSoFar = copiedPriorToThisBatch + args.RowsCopied;
                 _rowsCopied(totalCopiedSoFar);
             };
+
+            if (sqlConn.State == ConnectionState.Closed)
+            {
+                await sqlConn.OpenAsync(cancellationToken);
+            }
 
             await bc.WriteToServerAsync(bufferedStream, cancellationToken);
             dataReader.Close();

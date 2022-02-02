@@ -3,7 +3,7 @@
 namespace Soddi;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-public class ListOptions : CommandSettings
+public class ListOptions : BaseLoggingOptions
 {
     [CommandArgument(0, "[PATTERN]")]
     [Description("Pattern to include (e.g. \"av\" includes all archives containing \"av\").")]

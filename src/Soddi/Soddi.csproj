@@ -14,6 +14,7 @@
   </ItemGroup>
   
   <ItemGroup>
+    <PackageReference Include="Ben.Demystifier" Version="0.4.1" />
     <PackageReference Include="Humanizer.Core" Version="2.13.14" />
     <PackageReference Include="JetBrains.Annotations" Version="2020.3.0" />
     <PackageReference Include="Microsoft.Data.SqlClient" Version="4.0.1" />

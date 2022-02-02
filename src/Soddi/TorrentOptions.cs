@@ -3,7 +3,7 @@
 namespace Soddi;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-public class TorrentOptions : CommandSettings
+public class TorrentOptions : BaseLoggingOptions
 {
     [CommandArgument(0, "<ARCHIVE_NAME>")]
     [Description("Archive to download")]

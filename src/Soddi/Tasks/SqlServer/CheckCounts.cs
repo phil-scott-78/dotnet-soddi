@@ -34,9 +34,12 @@ public class CheckCounts : ITask
 
     private async Task<long> GetCountFromDbAsync(string tableName, CancellationToken cancellationToken)
     {
-        await using var sqlConn = new SqlConnection(_connectionString);
-        await sqlConn.OpenAsync(cancellationToken);
-        var command = new SqlCommand($"SELECT COUNT_BIG(*) from {tableName}", sqlConn);
-        return (long)await command.ExecuteScalarAsync(cancellationToken);
+        return await RetryPolicy.Policy.ExecuteAsync(async () =>
+        {
+            await using var sqlConn = new SqlConnection(_connectionString);
+            await sqlConn.OpenAsync(cancellationToken);
+            var command = new SqlCommand($"SELECT COUNT_BIG(*) from {tableName}", sqlConn);
+            return (long)await command.ExecuteScalarAsync(cancellationToken);
+        });
     }
 }

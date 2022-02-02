@@ -3,7 +3,7 @@
 namespace Soddi;
 
 [UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
-public class DownloadOptions : CommandSettings
+public class DownloadOptions : BaseLoggingOptions
 {
     [CommandArgument(0, "<ARCHIVE_NAME>")]
     [Description("Archive to download")]
