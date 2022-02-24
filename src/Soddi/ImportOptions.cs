@@ -117,6 +117,7 @@ public class ImportHandler : AsyncCommand<ImportOptions>
         if (!request.SkipPrimaryKeys)
         {
             tasks.Enqueue(("Add constraints", new AddConstraints(databaseConnectionString)));
+            tasks.Enqueue(("Add foreign keys", new AddForeignKeys(databaseConnectionString, !request.SkipTags)));
         }
 
         tasks.Enqueue(("Insert type values", new InsertTypeValues(databaseConnectionString)));
