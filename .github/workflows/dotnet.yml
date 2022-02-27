@@ -2,13 +2,16 @@ name: .NET
 
 on:
   push:
-    branches: [ main ]
+    paths-ignore:
+    - 'doc/**'
+    - 'img/**'
+    - 'changelog.md'
+    - 'license.txt'
+    - 'readme.md'
   pull_request:
-    branches: [ main ]
 
 jobs:
   build:
-
     runs-on: ubuntu-latest
 
     steps:
@@ -22,7 +25,11 @@ jobs:
       with:
         dotnet-version: '6.0.x'
 
+    - name: Build and Test (Debug)
+      run: dotnet test src -c Debug
+
     - name: Build, Tests, Cover, Pack and Publish (on push tag)
+      if: github.event_name == 'push'
       run: |
         dotnet tool install --global dotnet-releaser
         dotnet-releaser run --nuget-token ${{secrets.NUGET_TOKEN}} --github-token ${{secrets.GITHUB_TOKEN}} src/Soddi/dotnet-releaser.toml
