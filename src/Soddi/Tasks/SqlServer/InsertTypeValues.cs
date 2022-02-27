@@ -104,6 +104,10 @@ INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(34, N'PostNoticeRemoved')
 INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(35, N'PostMigratedAway')
 INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(36, N'PostMigratedHere')
 INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(37, N'PostMergeSource')
-INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(38, N'PostMergeDestination')
+INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(38, N'PostMergeDestination'
+INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(50, N'BumpedByCommunityUser'
+INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(52, N'BecameHotNetworkQuestion'
+INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(53, N'RemovedFromHotNetworkByMod'
+)
 ";
 }
