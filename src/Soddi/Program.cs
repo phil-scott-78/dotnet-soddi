@@ -50,6 +50,6 @@ try
 }
 catch (Exception e)
 {
-    AnsiConsole.WriteLine(e.ToStringDemystified());
+    AnsiConsole.WriteException(e);
 }
 

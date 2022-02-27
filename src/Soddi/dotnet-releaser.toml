@@ -1,0 +1,6 @@
+profile = "custom"
+[msbuild]
+project = "soddi.csproj"
+[github]
+user = "phil-scott-78/"
+repo = "dotnet-soddi"
