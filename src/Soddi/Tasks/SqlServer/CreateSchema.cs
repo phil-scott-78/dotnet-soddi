@@ -106,6 +106,7 @@ CREATE TABLE [dbo].[PostHistory](
 	[UserDisplayName] [nvarchar](40) NULL,
 	[Comment] [ntext] NULL,
 	[Text] [ntext] NULL,
+    [ContentLicense] [nvarchar](250) NOT NULL,
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
 

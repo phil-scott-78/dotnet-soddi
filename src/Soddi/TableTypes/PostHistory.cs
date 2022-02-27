@@ -16,4 +16,5 @@ public class PostHistory
     public string UserDisplayName { get; set; }
     public string Comment { get; set; }
     public string Text { get; set; }
+    public string ContentLicense { get; set; }
 }
