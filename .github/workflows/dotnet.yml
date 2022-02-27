@@ -1,0 +1,28 @@
+name: .NET
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+      with:
+        fetch-depth: 0
+
+    - name: Install .NET 6.0
+      uses: actions/setup-dotnet@v1
+      with:
+        dotnet-version: '6.0.x'
+
+    - name: Build, Tests, Cover, Pack and Publish (on push tag)
+      run: |
+        dotnet tool install --global dotnet-releaser
+        dotnet-releaser run --nuget-token ${{secrets.NUGET_TOKEN}} --github-token ${{secrets.GITHUB_TOKEN}} src/Soddi/dotnet-releaser.toml
