@@ -111,6 +111,19 @@ public class XmlToDataReader<TClass> : IDataReader
         if (!(XNode.ReadFrom(_xmlReader) is XElement el)) return false;
 
         _currentRowElement = el;
+        if (RecordsAffected == 0)
+        {
+            // on the first row we read let's check the columns in to the type and see if it jives.
+            foreach (var attribute in _currentRowElement.Attributes())
+            {
+                if (!_typeMapping.Select(i => i.Name)
+                        .Any(i => i.Equals(attribute.Name.LocalName, StringComparison.InvariantCultureIgnoreCase)))
+                {
+                    Log.Write(LogLevel.Trace, $"{attribute.Name.LocalName} not found for table {typeof(TClass).Name}");
+                }
+            }
+        }
+
         RecordsAffected++;
 
         // if we aren't a post record or have nothing to publish then we are done and can return
