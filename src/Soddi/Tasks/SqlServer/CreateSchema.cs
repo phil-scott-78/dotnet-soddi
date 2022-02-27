@@ -71,6 +71,8 @@ CREATE TABLE [dbo].[Badges](
 	[Name] [nvarchar](40) NOT NULL,
 	[UserId] [int] NOT NULL,
 	[Date] [datetime] NOT NULL,
+    [Class] [int] NOT NULL,
+    [TagBased] [bit] NOT NULL,
 ) ON [PRIMARY]
 GO
 
