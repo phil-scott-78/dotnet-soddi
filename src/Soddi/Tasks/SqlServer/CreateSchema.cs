@@ -106,7 +106,7 @@ CREATE TABLE [dbo].[PostHistory](
 	[UserDisplayName] [nvarchar](40) NULL,
 	[Comment] [ntext] NULL,
 	[Text] [ntext] NULL,
-    [ContentLicense] [nvarchar](250) NOT NULL,
+    [ContentLicense] [nvarchar](250) NULL,
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
 
@@ -220,6 +220,90 @@ CREATE TABLE [dbo].[PostTags] (
   ) ON [PRIMARY]
 ";
             }
+
+            s += @"
+/****** Post column comments  ******/
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Id of the accepted answer. Only present if PostTypeId = 1 (question).' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Posts', @level2type=N'COLUMN',@level2name=N'AcceptedAnswerId'
+GO
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'The body as rendered HTML.' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Posts', @level2type=N'COLUMN',@level2name=N'Body'
+GO
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'The date the post became community owned. Present only if post is community wiki''d.' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Posts', @level2type=N'COLUMN',@level2name=N'CommunityOwnedDate'
+GO
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'The date and time of the post''s most recent activity.' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Posts', @level2type=N'COLUMN',@level2name=N'LastActivityDate'
+GO
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'The date and time of the most recent edit to the post.' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Posts', @level2type=N'COLUMN',@level2name=N'LastEditDate'
+GO
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'User Id of the owner. Always -1 for tag wiki entries, i.e. the community user owns them.' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Posts', @level2type=N'COLUMN',@level2name=N'OwnerUserId'
+GO
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'The Id of the Parent. Only present if PostTypeId = 2 (answer).' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Posts', @level2type=N'COLUMN',@level2name=N'ParentId'
+GO
+
+
+/****** User column comments  ******/
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'The user''s profile as rendered HTML.' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Users', @level2type=N'COLUMN',@level2name=N'AboutMe'
+GO
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'The number of downvotes a user has cast.' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Users', @level2type=N'COLUMN',@level2name=N'DownVotes'
+GO
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'Always blank.' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Users', @level2type=N'COLUMN',@level2name=N'EmailHash'
+GO
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'The number of upvotes a user has cast.' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Users', @level2type=N'COLUMN',@level2name=N'UpVotes'
+GO
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'The number of times the profile has been viewed.' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Users', @level2type=N'COLUMN',@level2name=N'Views'
+GO
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'The user''s stack exchange network profile id.' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Users', @level2type=N'COLUMN',@level2name=N'AccountId'
+GO
+
+
+/****** User column comments  ******/
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'The class of the badge. 1 = Gold, 2 = Silver, 3 = Bronze.' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Badges', @level2type=N'COLUMN',@level2name=N'Class'
+GO
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'True if badge is for a tag, otherwise it is a named badge.' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Badges', @level2type=N'COLUMN',@level2name=N'TagBased'
+GO
+
+
+/****** Post History column comments  ******/
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'At times more than one type of history record can be recorded by a single action. All of these will be grouped using the same RevisionGUID.' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'PostHistory', @level2type=N'COLUMN',@level2name=N'RevisionGUID'
+GO
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'A raw version of the new value for a given revision. 
+
+If PostHistoryTypeId in (10,11,12,13,14,15,19,20,35) this column will contain a JSON encoded string with all users who have voted for the PostHistoryTypeId.
+
+If it is a duplicate close vote, the JSON string will contain an array of original questions as OriginalQuestionIds.
+
+If PostHistoryTypeId = 17 this column will contain migration details of either from <url> or to <url>.' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'PostHistory', @level2type=N'COLUMN',@level2name=N'Text'
+GO
+
+
+/****** Vote column comments  ******/
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'The bounty amount. Present only if VoteTypeId in (8, 9)' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Votes', @level2type=N'COLUMN',@level2name=N'Id'
+GO
+
+EXEC sys.sp_addextendedproperty @name=N'MS_Description', @value=N'The user Id of the voter. Present only if VoteTypeId in (5,8).' , @level0type=N'SCHEMA',@level0name=N'dbo', @level1type=N'TABLE',@level1name=N'Votes', @level2type=N'COLUMN',@level2name=N'UserId'
+GO
+
+
+
+
+
+";
 
             return s;
         }
