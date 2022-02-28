@@ -12,7 +12,8 @@ public class XmlToDataReader<TClass> : IDataReader
     private readonly Lazy<(int PostIdOrdinal, int TagOrdinal)> _postTagColumnOrdinals;
 
     private readonly PropertyInfo[] _typeMapping = typeof(TClass).GetProperties();
-    private readonly ConcurrentDictionary<string, int> _ordinalMapping = new();
+    private readonly Dictionary<string, int> _ordinalMapping = new();
+    private readonly Dictionary<int, XName> _ordinalToNameMapping = new();
 
     private XElement? _currentRowElement;
 
@@ -71,29 +72,54 @@ public class XmlToDataReader<TClass> : IDataReader
     public int GetInt32(int i) => (int.Parse((string)GetValue(i)));
     public string GetName(int i) => _typeMapping[i].Name;
     public string GetDataTypeName(int i) => _typeMapping[i].PropertyType.Name;
-    public bool IsDBNull(int i) => _currentRowElement?.Attribute(_typeMapping[i].Name) == null;
+    public bool IsDBNull(int i) => GetAttribute(i) == null;
     public Type GetFieldType(int i) => _typeMapping[i].PropertyType;
 
-    public object GetValue(int i) => _currentRowElement?.Attribute(_typeMapping[i].Name)?.Value ??
+    public object GetValue(int i) => GetAttribute(i)?.Value ??
                                      throw new Exception("No element to read");
+
 
     public int FieldCount => _typeMapping.Length;
 
+    private XAttribute? GetAttribute(int i)
+    {
+        if (_currentRowElement == null)
+        {
+            throw new Exception("No element to read");
+        }
+
+        // we can cache the XName at least
+        if (_ordinalToNameMapping.TryGetValue(i, out var xName))
+        {
+            return _currentRowElement?.Attribute(xName);
+        }
+
+        var newXName = XName.Get(_typeMapping[i].Name);
+        _ordinalToNameMapping.Add(i, newXName);
+        return _currentRowElement.Attribute(newXName) ?? null;
+    }
+
     public int GetOrdinal(string name)
     {
-        return _ordinalMapping.GetOrAdd(name, n =>
+        if (_ordinalMapping.TryGetValue(name, out var value))
         {
-            for (var i = 0; i < _typeMapping.Length; i++)
+            return value;
+        }
+
+        for (var i = 0; i < _typeMapping.Length; i++)
+        {
+            if (!_typeMapping[i].Name.Equals(name, StringComparison.InvariantCultureIgnoreCase))
             {
-                if (_typeMapping[i].Name.Equals(n, StringComparison.InvariantCultureIgnoreCase))
-                {
-                    return i;
-                }
+                continue;
             }
 
-            throw new Exception("Invalid column name");
-        });
+            _ordinalMapping.Add(name, i);
+            return i;
+        }
+
+        throw new Exception("Invalid column name");
     }
+
 
     public bool Read()
     {
@@ -144,10 +170,14 @@ public class XmlToDataReader<TClass> : IDataReader
     }
 
     private bool IsPost() => _isPost.Value;
-
     public int Depth => 0;
     public bool IsClosed => false;
-    public int RecordsAffected { get; private set; }
+
+    public int RecordsAffected
+    {
+        get;
+        private set;
+    }
 
     public void Dispose()
     {
