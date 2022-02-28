@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Soddi;
 
@@ -51,5 +51,8 @@ try
 catch (Exception e)
 {
     AnsiConsole.WriteException(e);
+    return -1;
 }
+
+return 0;
 
