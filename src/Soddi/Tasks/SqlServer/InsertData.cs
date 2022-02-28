@@ -20,7 +20,8 @@ public class InsertData : ITask
         _reportCount = reportCount;
     }
 
-    public async Task GoAsync(IProgress<(string taskId, string message, double weight, double maxValue)> progress, CancellationToken cancellationToken)
+    public async Task GoAsync(IProgress<(string taskId, string message, double weight, double maxValue)> progress,
+        CancellationToken cancellationToken)
     {
         // keep a list of the insertion tasks. we want to move on to reading
         // as quick as possible as the backlog of inserts is taking care of
@@ -29,14 +30,21 @@ public class InsertData : ITask
             batch = batch.ToList();
             foreach (var (fileName, stream, fileSize) in batch)
             {
+                PubSubPostTagDataReader? postTagDataReader = null;
+                var isPostFile = fileName.Equals("posts.xml", StringComparison.InvariantCultureIgnoreCase);
+
+                if (isPostFile && _includePostTags)
+                {
+                    // if we are reading a posts.xml file and we need to generate the tags we'll launch a third
+                    // thread to bulk insert the tags as we find them. it'll use the PubSubPostTagDataReader
+                    // as the source of the data, and then in the thread that is reading posts.xml when it finds
+                    // a new row with tags it'll call an action (defined below) that adds that tag to the DataReader
+                    postTagDataReader = new PubSubPostTagDataReader();
+                }
+
                 // the blocking stream will let us read and write simultaneously
                 var blockingStream = new BlockingStream();
-                var decrypt = Task.Factory.StartNew(() =>
-                {
-                    Thread.CurrentThread.Priority = ThreadPriority.AboveNormal;
-                    stream.CopyTo(blockingStream);
-                    blockingStream.CompleteWriting();
-                }, token);
+
 
                 var totalBatchCount = 0L;
                 var inserter = new SqlServerBulkInserter(_connectionString, _dbName, l =>
@@ -50,17 +58,15 @@ public class InsertData : ITask
                         Math.Max(estRowsPerFile, totalBatchCount + 1)));
                 });
 
-                var isPostFile = fileName.Equals("posts.xml", StringComparison.InvariantCultureIgnoreCase);
-                Task? postTagTask = null;
-                PubSubPostTagDataReader? postTagDataReader = null;
-
-                if (isPostFile && _includePostTags)
+                var decrypt = stream.CopyToAsync(blockingStream, token).ContinueWith((task, o) =>
                 {
-                    // if we are reading a posts.xml file and we need to generate the tags we'll launch a third
-                    // thread to bulk insert the tags as we find them. it'll use the PubSubPostTagDataReader
-                    // as the source of the data, and then in the thread that is reading posts.xml when it finds
-                    // a new row with tags it'll call an action (defined below) that adds that tag to the DataReader
-                    postTagDataReader = new PubSubPostTagDataReader();
+                    blockingStream.CompleteWriting();
+                    postTagDataReader?.NoMoreRecords();
+                }, token, token);
+
+                Task? postTagTask = null;
+                if (postTagDataReader != null)
+                {
                     var postTagInserter = new SqlServerBulkInserter(_connectionString, _dbName, _ => { });
                     postTagTask = postTagInserter.InsertAsync(postTagDataReader, "PostTags.xml", cancellationToken);
                 }
@@ -72,14 +78,14 @@ public class InsertData : ITask
                     );
 
                 await inserter.InsertAsync(dataReader, fileName, cancellationToken);
+                await decrypt;
 
                 // if we have a post tag reader make sure we close it so the queue gets cleared out
                 // then wait for it to complete
-                postTagDataReader?.NoMoreRecords();
-                await decrypt.WaitAsync(cancellationToken);
+
                 if (postTagTask != null)
                 {
-                    await postTagTask.WaitAsync(cancellationToken);
+                    await postTagTask;
                 }
 
                 _reportCount(fileName, dataReader.RecordsAffected);

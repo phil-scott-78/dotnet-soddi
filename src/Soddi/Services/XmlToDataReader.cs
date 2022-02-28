@@ -108,7 +108,7 @@ public class XmlToDataReader<TClass> : IDataReader
         } while (_xmlReader.NodeType != XmlNodeType.Element && _xmlReader.Name != "row");
 
         // make sure the current node is an XElement and if so set the current row to it
-        if (!(XNode.ReadFrom(_xmlReader) is XElement el)) return false;
+        if (XNode.ReadFrom(_xmlReader) is not XElement el) return false;
 
         _currentRowElement = el;
         if (RecordsAffected == 0)
