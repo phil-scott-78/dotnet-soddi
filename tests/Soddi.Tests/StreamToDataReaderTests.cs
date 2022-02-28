@@ -33,7 +33,7 @@ public class StreamToDataReaderTests
         using var stream = File.OpenRead("test-files/eosio.meta.stackexchange.com/Badges.xml");
         using var dr = stream.AsDataReader("badges.xml");
 
-        dr.FieldCount.ShouldBe(4);
+        dr.FieldCount.ShouldBe(6);
 
         var id = dr.GetOrdinal("Id");
         var userId = dr.GetOrdinal("UserId");
