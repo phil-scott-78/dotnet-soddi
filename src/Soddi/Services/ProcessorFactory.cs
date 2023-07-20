@@ -1,20 +1,13 @@
 ﻿namespace Soddi.Services;
 
 [UsedImplicitly]
-public class ProcessorFactory
+public class ProcessorFactory(IFileSystem fileSystem)
 {
-    private readonly IFileSystem _fileSystem;
-
-    public ProcessorFactory(IFileSystem fileSystem)
-    {
-        _fileSystem = fileSystem;
-    }
-
     public IArchivedDataProcessor VerifyAndCreateProcessor(string requestPath, bool processSequentially = false)
     {
-        if (_fileSystem.File.Exists(requestPath))
+        if (fileSystem.File.Exists(requestPath))
         {
-            var fileInfo = _fileSystem.FileInfo.FromFileName(requestPath);
+            var fileInfo = fileSystem.FileInfo.FromFileName(requestPath);
 
             // quick check on the extension, we'll verify contents later
             if (fileInfo.Extension.Equals(".7z", StringComparison.InvariantCultureIgnoreCase) == false)
@@ -23,11 +16,11 @@ public class ProcessorFactory
             }
 
             return processSequentially
-                ? new SequentialArchiveProcessor(new[] { requestPath }, _fileSystem)
-                : new ParallelArchiveProcessor(new[] { requestPath }, _fileSystem);
+                ? new SequentialArchiveProcessor(new[] { requestPath }, fileSystem)
+                : new ParallelArchiveProcessor(new[] { requestPath }, fileSystem);
         }
 
-        if (!_fileSystem.Directory.Exists(requestPath))
+        if (!fileSystem.Directory.Exists(requestPath))
         {
             throw new SoddiException("Could not find folder or archive " + requestPath);
         }
@@ -38,7 +31,7 @@ public class ProcessorFactory
         };
         // if they passed in a directory let's figure out if it's a collection
         // of xml files or maybe a collection of .7z files
-        var directory = _fileSystem.DirectoryInfo.FromDirectoryName(requestPath);
+        var directory = fileSystem.DirectoryInfo.FromDirectoryName(requestPath);
         var xmlFiles = directory.GetFiles("*.xml").ToArray();
         var sevenFiles = directory.GetFiles("*.7z").ToArray();
         if (sevenFiles.Length > 0 && xmlFiles.Length > 0)
@@ -50,7 +43,7 @@ public class ProcessorFactory
         if (xmlFiles.Length > 0)
         {
             AssertProperFiles(expectedFiles, xmlFiles, "xml");
-            return new FolderProcessor(requestPath, _fileSystem);
+            return new FolderProcessor(requestPath, fileSystem);
         }
 
         if (sevenFiles.Length > 0)
@@ -58,8 +51,8 @@ public class ProcessorFactory
             AssertProperFiles(expectedFiles, sevenFiles, "7z");
             var files = sevenFiles.Select(i => i.FullName).ToArray();
             return processSequentially
-                ? new SequentialArchiveProcessor(files, _fileSystem)
-                : new ParallelArchiveProcessor(files, _fileSystem);
+                ? new SequentialArchiveProcessor(files, fileSystem)
+                : new ParallelArchiveProcessor(files, fileSystem);
         }
 
         throw new SoddiException(

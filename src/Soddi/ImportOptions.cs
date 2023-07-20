@@ -52,39 +52,25 @@ public class ImportOptions : BaseLoggingOptions
 
 record ImportSummary(long XmlRowsRead, long CountFromDb);
 
-public class ImportHandler : AsyncCommand<ImportOptions>
-{
-    private readonly AvailableArchiveParser _availableArchiveParser;
-    private readonly DatabaseHelper _databaseHelper;
-    private readonly ProcessorFactory _processorFactory;
-    private readonly IFileSystem _fileSystem;
-    private readonly IAnsiConsole _console;
-
-    public ImportHandler(DatabaseHelper databaseHelper, ProcessorFactory processorFactory, IFileSystem fileSystem,
+public class ImportHandler(DatabaseHelper databaseHelper, ProcessorFactory processorFactory, IFileSystem fileSystem,
         AvailableArchiveParser availableArchiveParser, IAnsiConsole console)
-    {
-        _databaseHelper = databaseHelper;
-        _processorFactory = processorFactory;
-        _fileSystem = fileSystem;
-        _availableArchiveParser = availableArchiveParser;
-        _console = console;
-    }
-
+    : AsyncCommand<ImportOptions>
+{
     private async Task<string> CheckAndFixupPath(string path, CancellationToken token)
     {
-        if (_fileSystem.File.Exists(path) || _fileSystem.Directory.Exists(path))
+        if (fileSystem.File.Exists(path) || fileSystem.Directory.Exists(path))
         {
             return path;
         }
 
-        var archives = await _availableArchiveParser.Get(token);
+        var archives = await availableArchiveParser.Get(token);
         var foundByShortName =
             archives.FirstOrDefault(i => i.ShortName.Equals(path, StringComparison.InvariantCultureIgnoreCase));
 
         if (foundByShortName != null)
         {
             var potentialLongFileName = foundByShortName.LongName + ".7z";
-            if (_fileSystem.File.Exists(potentialLongFileName)) return potentialLongFileName;
+            if (fileSystem.File.Exists(potentialLongFileName)) return potentialLongFileName;
         }
 
         throw new SoddiException("Could not find archive " + path);
@@ -95,14 +81,14 @@ public class ImportHandler : AsyncCommand<ImportOptions>
         var cancellationToken = new CancellationToken();
 
         var requestPath = await CheckAndFixupPath(request.Path, cancellationToken);
-        var dbName = _databaseHelper.GetDbNameFromPathOption(request.DatabaseName, requestPath);
+        var dbName = databaseHelper.GetDbNameFromPathOption(request.DatabaseName, requestPath);
         var tasks = new Queue<(string name, ITask task)>();
         var (masterConnectionString, databaseConnectionString) =
-            _databaseHelper.GetMasterAndDbConnectionStrings(request.ConnectionString, dbName);
+            databaseHelper.GetMasterAndDbConnectionStrings(request.ConnectionString, dbName);
 
         var report = new ConcurrentDictionary<string, ImportSummary>();
 
-        var processor = _processorFactory.VerifyAndCreateProcessor(requestPath, request.Sequential);
+        var processor = processorFactory.VerifyAndCreateProcessor(requestPath, request.Sequential);
 
         if (request.DropAndRecreate)
         {
@@ -126,7 +112,7 @@ public class ImportHandler : AsyncCommand<ImportOptions>
                 databaseConnectionString,
                 dbName,
                 processor,
-                !request.SkipTags, (filename, count) => { report.TryAdd(_fileSystem.Path.GetFileNameWithoutExtension(filename), new ImportSummary(count, 0)); })));
+                !request.SkipTags, (filename, count) => { report.TryAdd(fileSystem.Path.GetFileNameWithoutExtension(filename), new ImportSummary(count, 0)); })));
 
         tasks.Enqueue(("Check DB Status", new CheckCounts(
             databaseConnectionString,
@@ -134,7 +120,7 @@ public class ImportHandler : AsyncCommand<ImportOptions>
                 _ => new ImportSummary(0, count),
                 (_, summary) => summary with { CountFromDb = count }))));
 
-        var progressBar = _console.Progress()
+        var progressBar = console.Progress()
             .AutoClear(false)
             .Columns(new SpinnerColumn { CompletedText = Emoji.Known.CheckMark }, new FixedTaskDescriptionColumn(40),
                 new ProgressBarColumn(), new PercentageColumn(), new RemainingTimeColumn());
@@ -177,8 +163,8 @@ public class ImportHandler : AsyncCommand<ImportOptions>
                 pair => new BreakdownChartItem(pair.Key, pair.Value.CountFromDb, counter++)
             );
 
-        _console.MarkupLine("[blue]Rows inserted[/]");
-        _console.Write(chart);
+        console.MarkupLine("[blue]Rows inserted[/]");
+        console.Write(chart);
 
         if (report.Any(i => i.Value.CountFromDb != i.Value.XmlRowsRead))
         {
@@ -197,13 +183,13 @@ public class ImportHandler : AsyncCommand<ImportOptions>
                 );
             }
 
-            _console.WriteLine();
-            _console.MarkupLine("[red]Mismatch Row Count[/]");
-            _console.Write(table);
+            console.WriteLine();
+            console.MarkupLine("[red]Mismatch Row Count[/]");
+            console.Write(table);
         }
 
-        _console.WriteLine();
-        _console.MarkupLine($"Import complete in [blue]{stopWatch.Elapsed.Humanize(2)}[/].");
+        console.WriteLine();
+        console.MarkupLine($"Import complete in [blue]{stopWatch.Elapsed.Humanize(2)}[/].");
 
         return 0;
     }

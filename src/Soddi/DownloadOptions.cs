@@ -25,20 +25,10 @@ public class DownloadOptions : BaseLoggingOptions
 }
 
 [UsedImplicitly]
-public class DownloadHandler : AsyncCommand<DownloadOptions>
+public class DownloadHandler(IFileSystem fileSystem, IAnsiConsole console,
+        AvailableArchiveParser availableArchiveParser)
+    : AsyncCommand<DownloadOptions>
 {
-    private readonly IFileSystem _fileSystem;
-    private readonly IAnsiConsole _console;
-    private readonly AvailableArchiveParser _availableArchiveParser;
-
-    public DownloadHandler(IFileSystem fileSystem, IAnsiConsole console, AvailableArchiveParser availableArchiveParser)
-    {
-        _fileSystem = fileSystem;
-        _console = console;
-        _availableArchiveParser = availableArchiveParser;
-    }
-
-
     public override async Task<int> ExecuteAsync(CommandContext context, DownloadOptions request)
     {
         var cancellationToken = new CancellationToken();
@@ -46,20 +36,20 @@ public class DownloadHandler : AsyncCommand<DownloadOptions>
         var outputPath = request.Output;
         if (string.IsNullOrWhiteSpace(outputPath))
         {
-            outputPath = _fileSystem.Directory.GetCurrentDirectory();
+            outputPath = fileSystem.Directory.GetCurrentDirectory();
         }
 
-        if (!_fileSystem.Directory.Exists(outputPath))
+        if (!fileSystem.Directory.Exists(outputPath))
         {
             throw new SoddiException($"Output path {outputPath} not found");
         }
 
         var archiveUrl =
-            await _availableArchiveParser.FindOrPickArchive(request.Archive, request.Pick, cancellationToken);
+            await availableArchiveParser.FindOrPickArchive(request.Archive, request.Pick, cancellationToken);
 
         var stopWatch = Stopwatch.StartNew();
 
-        await _console.Progress()
+        await console.Progress()
             .AutoClear(false)
             .Columns(new ProgressColumn[]
             {
@@ -97,7 +87,7 @@ public class DownloadHandler : AsyncCommand<DownloadOptions>
             });
 
         stopWatch.Stop();
-        _console.MarkupLine($"Download complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
+        console.MarkupLine($"Download complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
 
         return await Task.FromResult(0);
     }

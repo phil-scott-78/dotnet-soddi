@@ -14,20 +14,15 @@ public abstract class BaseLoggingOptions : CommandSettings
 
 public sealed class VerbosityConverter : TypeConverter
 {
-    private readonly Dictionary<string, LogLevel> _lookup;
-
-    public VerbosityConverter()
+    private readonly Dictionary<string, LogLevel> _lookup = new(StringComparer.OrdinalIgnoreCase)
     {
-        _lookup = new Dictionary<string, LogLevel>(StringComparer.OrdinalIgnoreCase)
-        {
-            { "o", LogLevel.Off },
-            { "t", LogLevel.Trace },
-            { "i", LogLevel.Information },
-            { "w", LogLevel.Warning },
-            { "e", LogLevel.Error },
-            { "c", LogLevel.Critical }
-        };
-    }
+        { "o", LogLevel.Off },
+        { "t", LogLevel.Trace },
+        { "i", LogLevel.Information },
+        { "w", LogLevel.Warning },
+        { "e", LogLevel.Error },
+        { "c", LogLevel.Critical }
+    };
 
     public override object ConvertFrom(ITypeDescriptorContext? context, CultureInfo? culture, object value)
     {

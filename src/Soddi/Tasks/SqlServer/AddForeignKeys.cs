@@ -2,23 +2,14 @@
 
 namespace Soddi.Tasks.SqlServer;
 
-public class AddForeignKeys: ITask
+public class AddForeignKeys(string connectionString, bool includePostTags) : ITask
 {
-    private readonly string _connectionString;
-    private readonly bool _includePostTags;
-
-    public AddForeignKeys(string connectionString, bool includePostTags)
-    {
-        _connectionString = connectionString;
-        _includePostTags = includePostTags;
-    }
-
     public async Task GoAsync(IProgress<(string taskId, string message, double weight, double maxValue)> progress, CancellationToken cancellationToken)
     {
         await RetryPolicy.Policy.ExecuteAsync(async () => 
         {
             var statements = Sql.Split("GO");
-            await using var sqlConn = new SqlConnection(_connectionString);
+            await using var sqlConn = new SqlConnection(connectionString);
             await sqlConn.OpenAsync(cancellationToken);
 
             var incrementValue = GetTaskWeight() / statements.Length;
@@ -89,7 +80,7 @@ public class AddForeignKeys: ITask
     GO
 ";
 
-            if (_includePostTags)
+            if (includePostTags)
             {
                 s += @"
 /****** Object:  Table [dbo].[PostTags]    Script Date: 9/15/2020 7:48:12 PM ******/

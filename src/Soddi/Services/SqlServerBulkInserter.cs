@@ -3,29 +3,17 @@ using Polly;
 
 namespace Soddi.Services;
 
-public class SqlServerBulkInserter
+public class SqlServerBulkInserter(string connectionString,
+    string dbName,
+    Action<long> rowsCopied,
+    IFileSystem? fileSystem = null)
 {
-    private readonly IFileSystem _fileSystem;
-    private readonly string _connectionString;
-    private readonly string _dbName;
-    private readonly Action<long> _rowsCopied;
-
-    public SqlServerBulkInserter(
-        string connectionString,
-        string dbName,
-        Action<long> rowsCopied,
-        IFileSystem? fileSystem = null)
-    {
-        _connectionString = connectionString;
-        _dbName = dbName;
-        _rowsCopied = rowsCopied;
-        _fileSystem = fileSystem ?? new FileSystem();
-    }
+    private readonly IFileSystem _fileSystem = fileSystem ?? new FileSystem();
 
     public async Task InsertAsync(IDataReader dataReader, string fileName, CancellationToken cancellationToken)
     {
         var tableName = _fileSystem.Path.GetFileNameWithoutExtension(fileName);
-        var connBuilder = new SqlConnectionStringBuilder(_connectionString) { InitialCatalog = _dbName };
+        var connBuilder = new SqlConnectionStringBuilder(connectionString) { InitialCatalog = dbName };
 
         // posts and posthistory are significantly larger due to the text content so we need
         // to make sure their batches are smaller than the other tables. Comments we'll tweak a bit lower too.
@@ -61,16 +49,13 @@ public class SqlServerBulkInserter
         {
             await using var sqlConn = new SqlConnection(connBuilder.ConnectionString);
             await sqlConn.OpenAsync(cancellationToken);
-            using var bc = new SqlBulkCopy(sqlConn, SqlBulkCopyOptions.TableLock | SqlBulkCopyOptions.KeepIdentity, null)
-            {
-                DestinationTableName = tableName,
-                EnableStreaming = true,
-                BulkCopyTimeout = 360,
-                // these two need to be equal. we rely on the NotifyAfter to fire to keep the buffer clean. ideally
-                // there would be a different event on Batch completion but this will suffice.
-                BatchSize = batchSize,
-                NotifyAfter = batchSize
-            };
+            using var bc = new SqlBulkCopy(sqlConn, SqlBulkCopyOptions.TableLock | SqlBulkCopyOptions.KeepIdentity, null);
+            bc.DestinationTableName = tableName;
+            bc.EnableStreaming = true;
+            bc.BulkCopyTimeout = 360; // these two need to be equal. we rely on the NotifyAfter to fire to keep the buffer clean. ideally
+            // there would be a different event on Batch completion but this will suffice.
+            bc.BatchSize = batchSize;
+            bc.NotifyAfter = batchSize;
 
             for (var i = 0; i < dataReader.FieldCount; i++)
             {
@@ -125,7 +110,7 @@ public class SqlServerBulkInserter
             bc.SqlRowsCopied += (_, args) =>
             {
                 totalCopiedSoFar = copiedPriorToThisBatch + args.RowsCopied;
-                _rowsCopied(totalCopiedSoFar);
+                rowsCopied(totalCopiedSoFar);
             };
 
             if (sqlConn.State == ConnectionState.Closed)
@@ -138,20 +123,12 @@ public class SqlServerBulkInserter
         });
     }
 
-    private class BufferedDataReader : IDataReader
+    private class BufferedDataReader(IDataReader innerDataReader, int batchSize) : IDataReader
     {
-        private readonly IDataReader _innerDataReader;
-        private readonly Queue<object?[]> _buffer;
+        private readonly Queue<object?[]> _buffer = new(batchSize);
         private bool _replayFromBuffer;
         private object?[]? _currentRow;
-        private readonly int _maxBuffer;
-
-        public BufferedDataReader(IDataReader innerDataReader, int batchSize)
-        {
-            _innerDataReader = innerDataReader;
-            _buffer = new Queue<object?[]>(batchSize);
-            _maxBuffer = batchSize * 5;
-        }
+        private readonly int _maxBuffer = batchSize * 5;
 
         public void SetReplay() => _replayFromBuffer = true;
 
@@ -165,7 +142,7 @@ public class SqlServerBulkInserter
 
             // either this is already false or we just emptied the queue so set it back to false;
             _replayFromBuffer = false;
-            var isRow = _innerDataReader.Read();
+            var isRow = innerDataReader.Read();
             if (!isRow)
             {
                 // no row to read, return false;
@@ -177,9 +154,9 @@ public class SqlServerBulkInserter
             var newRow = new object?[FieldCount];
             for (var i = 0; i < FieldCount; i++)
             {
-                newRow[i] = _innerDataReader.IsDBNull(i)
+                newRow[i] = innerDataReader.IsDBNull(i)
                     ? null
-                    : _innerDataReader.GetValue(i);
+                    : innerDataReader.GetValue(i);
             }
 
             if (_buffer.Count > _maxBuffer)
@@ -204,14 +181,14 @@ public class SqlServerBulkInserter
         }
 
         // delegate
-        public int FieldCount => _innerDataReader.FieldCount;
-        public DataTable? GetSchemaTable() => _innerDataReader.GetSchemaTable();
-        public int GetOrdinal(string name) => _innerDataReader.GetOrdinal(name);
-        public bool NextResult() => _innerDataReader.NextResult();
-        public int Depth => _innerDataReader.Depth;
-        public bool IsClosed => _innerDataReader.IsClosed;
-        public int RecordsAffected => _innerDataReader.RecordsAffected;
-        public Type GetFieldType(int i) => _innerDataReader.GetFieldType(i);
+        public int FieldCount => innerDataReader.FieldCount;
+        public DataTable? GetSchemaTable() => innerDataReader.GetSchemaTable();
+        public int GetOrdinal(string name) => innerDataReader.GetOrdinal(name);
+        public bool NextResult() => innerDataReader.NextResult();
+        public int Depth => innerDataReader.Depth;
+        public bool IsClosed => innerDataReader.IsClosed;
+        public int RecordsAffected => innerDataReader.RecordsAffected;
+        public Type GetFieldType(int i) => innerDataReader.GetFieldType(i);
 
         // not used by SqlBulkCopy
         public bool GetBoolean(int i) => throw new NotImplementedException();

@@ -6,9 +6,9 @@ namespace Soddi.Services;
 /// Specialized DataReader specifically for allowing one thread to push tags
 /// and another thread to bulk insert
 /// </summary>
-public class PubSubPostTagDataReader : IDataReader
+public partial class PubSubPostTagDataReader : IDataReader
 {
-    private readonly Regex _rx = new(@"\<([^>]+)\>", RegexOptions.Compiled);
+    private readonly Regex _rx = TagRegEx();
 
     public bool GetBoolean(int i) => throw new NotImplementedException();
     public byte GetByte(int i) => throw new NotImplementedException();
@@ -142,4 +142,7 @@ public class PubSubPostTagDataReader : IDataReader
     {
         IsClosed = true;
     }
+
+    [GeneratedRegex("\\<([^>]+)\\>", RegexOptions.Compiled)]
+    private static partial Regex TagRegEx();
 }

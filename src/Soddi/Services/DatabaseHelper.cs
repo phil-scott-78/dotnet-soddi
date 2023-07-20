@@ -3,12 +3,8 @@
 namespace Soddi.Services;
 
 [UsedImplicitly]
-public class DatabaseHelper
+public class DatabaseHelper(IFileSystem fileSystem)
 {
-    private readonly IFileSystem _fileSystem;
-    public DatabaseHelper(IFileSystem fileSystem) => _fileSystem = fileSystem;
-
-
     /// <summary>
     /// Takes a connection string and returns two new connection strings. The first sets the
     /// initial database to master and the second one points to a specific database
@@ -53,14 +49,14 @@ public class DatabaseHelper
             return databaseName;
         }
 
-        if (_fileSystem.Directory.Exists(path))
+        if (fileSystem.Directory.Exists(path))
         {
-            return _fileSystem.DirectoryInfo.FromDirectoryName(path).Name;
+            return fileSystem.DirectoryInfo.FromDirectoryName(path).Name;
         }
 
-        if (_fileSystem.File.Exists(path))
+        if (fileSystem.File.Exists(path))
         {
-            return _fileSystem.Path.GetFileNameWithoutExtension(path);
+            return fileSystem.Path.GetFileNameWithoutExtension(path);
         }
 
         // we should have already verified the path is good at this point

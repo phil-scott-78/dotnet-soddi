@@ -2,20 +2,13 @@
 
 namespace Soddi.Tasks.SqlServer;
 
-public class InsertTypeValues : ITask
+public class InsertTypeValues(string connectionString) : ITask
 {
-    private readonly string _connectionString;
-
-    public InsertTypeValues(string connectionString)
-    {
-        _connectionString = connectionString;
-    }
-
     public async Task GoAsync(IProgress<(string taskId, string message, double weight, double maxValue)> progress, CancellationToken cancellationToken)
     {
         await RetryPolicy.Policy.ExecuteAsync(async () => 
         {
-            await using var sqlConn = new SqlConnection(_connectionString);
+            await using var sqlConn = new SqlConnection(connectionString);
             await using var command = new SqlCommand(Sql, sqlConn);
 
             await sqlConn.OpenAsync(cancellationToken);

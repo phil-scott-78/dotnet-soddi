@@ -30,20 +30,9 @@ public class BrentOptions : BaseLoggingOptions
     };
 }
 
-public class BrentHandler : AsyncCommand<BrentOptions>
+public class BrentHandler(IAnsiConsole console, TorrentDownloader torrentDownloader, IFileSystem fileSystem)
+    : AsyncCommand<BrentOptions>
 {
-    private readonly IAnsiConsole _console;
-    private readonly TorrentDownloader _torrentDownloader;
-    private readonly IFileSystem _fileSystem;
-
-    public BrentHandler(IAnsiConsole console, TorrentDownloader torrentDownloader, IFileSystem fileSystem)
-    {
-        _console = console;
-        _torrentDownloader = torrentDownloader;
-        _fileSystem = fileSystem;
-    }
-
-
     public override async Task<int> ExecuteAsync(CommandContext context, BrentOptions settings)
     {
         var archives = new List<BrentArchive>()
@@ -61,7 +50,7 @@ public class BrentHandler : AsyncCommand<BrentOptions>
         var archiveName = settings.Archive;
         if (string.IsNullOrWhiteSpace(archiveName))
         {
-            var choice = _console.Prompt(
+            var choice = console.Prompt(
                 new SelectionPrompt<BrentArchive>()
                     .PageSize(10)
                     .Title("Pick an archive to download")
@@ -80,26 +69,26 @@ public class BrentHandler : AsyncCommand<BrentOptions>
         var outputPath = settings.Output;
         if (string.IsNullOrWhiteSpace(outputPath))
         {
-            outputPath = _fileSystem.Directory.GetCurrentDirectory();
+            outputPath = fileSystem.Directory.GetCurrentDirectory();
         }
 
-        if (!_fileSystem.Directory.Exists(outputPath))
+        if (!fileSystem.Directory.Exists(outputPath))
         {
             throw new SoddiException($"Output path {outputPath} not found");
         }
 
-        var downloadedFiles = await _torrentDownloader.DownloadAsync(archive.Url,
+        var downloadedFiles = await torrentDownloader.DownloadAsync(archive.Url,
             settings.EnablePortForwarding = settings.EnablePortForwarding,
             outputPath,
             CancellationToken.None);
 
         var sevenZipFiles = downloadedFiles.Where(i =>
-            _fileSystem.Path.GetExtension(i).Equals(".7z", StringComparison.InvariantCultureIgnoreCase));
+            fileSystem.Path.GetExtension(i).Equals(".7z", StringComparison.InvariantCultureIgnoreCase));
 
         var stopWatch = Stopwatch.StartNew();
 
 
-        var progressBar = _console.Progress()
+        var progressBar = console.Progress()
             .AutoClear(false)
             .Columns(new ProgressColumn[]
             {
@@ -112,7 +101,7 @@ public class BrentHandler : AsyncCommand<BrentOptions>
         {
             foreach (var sevenZipFile in sevenZipFiles)
             {
-                using var stream = _fileSystem.File.OpenRead(sevenZipFile);
+                using var stream = fileSystem.File.OpenRead(sevenZipFile);
                 using var sevenZipArchive = SevenZipArchive.Open(stream);
 
                 var tasks = sevenZipArchive.Entries.ToImmutableDictionary(
@@ -140,24 +129,17 @@ public class BrentHandler : AsyncCommand<BrentOptions>
         });
 
         stopWatch.Stop();
-        _console.MarkupLine($"Extraction complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
+        console.MarkupLine($"Extraction complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
 
         return 0;
     }
 }
 
-public class BrentArchive
+public class BrentArchive(string url, string name, string shortName)
 {
-    public BrentArchive(string url, string name, string shortName)
-    {
-        Url = url;
-        Name = name;
-        ShortName = shortName;
-    }
-
-    public string Url { get; }
-    public string Name { get; }
-    public string ShortName { get; }
+    public string Url { get; } = url;
+    public string Name { get; } = name;
+    public string ShortName { get; } = shortName;
 
     public override string ToString()
     {

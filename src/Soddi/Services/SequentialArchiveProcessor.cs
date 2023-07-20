@@ -2,20 +2,13 @@
 
 namespace Soddi.Services;
 
-public class ParallelArchiveProcessor : IArchivedDataProcessor
+public class ParallelArchiveProcessor(string[] paths, IFileSystem? fileSystem = null) : IArchivedDataProcessor
 {
-    private readonly IFileSystem _fileSystem;
-    private readonly string[] _paths;
-
-    public ParallelArchiveProcessor(string[] paths, IFileSystem? fileSystem = null)
-    {
-        _paths = paths;
-        _fileSystem = fileSystem ?? new FileSystem();
-    }
+    private readonly IFileSystem _fileSystem = fileSystem ?? new FileSystem();
 
     public IEnumerable<IEnumerable<(string fileName, Stream stream, long size)>> GetFiles()
     {
-        foreach (var path in _paths)
+        foreach (var path in paths)
         {
             var allFiles = SevenZipArchive.Open(path).Entries.Select(i => i.Key);
             foreach (var file in allFiles)
@@ -37,20 +30,13 @@ public class ParallelArchiveProcessor : IArchivedDataProcessor
     }
 }
 
-public class SequentialArchiveProcessor : IArchivedDataProcessor
+public class SequentialArchiveProcessor(string[] paths, IFileSystem? fileSystem = null) : IArchivedDataProcessor
 {
-    private readonly IFileSystem _fileSystem;
-    private readonly string[] _paths;
-
-    public SequentialArchiveProcessor(string[] paths, IFileSystem? fileSystem = null)
-    {
-        _paths = paths;
-        _fileSystem = fileSystem ?? new FileSystem();
-    }
+    private readonly IFileSystem _fileSystem = fileSystem ?? new FileSystem();
 
     public IEnumerable<IEnumerable<(string fileName, Stream stream, long size)>> GetFiles()
     {
-        foreach (var path in _paths)
+        foreach (var path in paths)
         {
             yield return Batch(path);
         }
@@ -82,20 +68,13 @@ public class SequentialArchiveProcessor : IArchivedDataProcessor
     }
 }
 
-public class FolderProcessor : IArchivedDataProcessor
+public class FolderProcessor(string path, IFileSystem? fileSystem = null) : IArchivedDataProcessor
 {
-    private readonly IFileSystem _fileSystem;
-    private readonly string _path;
-
-    public FolderProcessor(string path, IFileSystem? fileSystem = null)
-    {
-        _path = path;
-        _fileSystem = fileSystem ?? new FileSystem();
-    }
+    private readonly IFileSystem _fileSystem = fileSystem ?? new FileSystem();
 
     public IEnumerable<IEnumerable<(string fileName, Stream stream, long size)>> GetFiles()
     {
-        var files = _fileSystem.Directory.GetFiles(_path, "*.xml");
+        var files = _fileSystem.Directory.GetFiles(path, "*.xml");
         foreach (var file in files)
         {
             yield return Batch(file);
