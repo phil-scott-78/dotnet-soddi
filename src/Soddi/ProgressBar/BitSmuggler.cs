@@ -3,14 +3,9 @@ using MonoTorrent;
 
 namespace Soddi.ProgressBar;
 
-internal readonly struct BitSmuggler
+internal readonly struct BitSmuggler(BitField bits)
 {
-    public BitSmuggler(BitField bits)
-    {
-        Bits = bits;
-    }
-
-    public BitField Bits { get; }
+    public BitField Bits { get; } = bits;
 
     public IEnumerable<decimal> Smush(int desiredLength)
     {

@@ -2,12 +2,7 @@
 
 namespace Soddi.TableTypes;
 
-public class StackOverflowDataTable : Attribute
+public class StackOverflowDataTable(string fileName) : Attribute
 {
-    public string FileName { get; }
-
-    public StackOverflowDataTable(string fileName)
-    {
-        FileName = fileName;
-    }
+    public string FileName { get; } = fileName;
 }

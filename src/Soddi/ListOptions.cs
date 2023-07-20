@@ -16,23 +16,15 @@ public class ListOptions : BaseLoggingOptions
     public static readonly string[][] Examples = { new[] { "list" }, new[] { "list", "spa" } };
 }
 
-public class ListHandler : AsyncCommand<ListOptions>
+public class ListHandler(IAnsiConsole console, AvailableArchiveParser availableArchiveParser)
+    : AsyncCommand<ListOptions>
 {
-    private readonly IAnsiConsole _console;
-    private readonly AvailableArchiveParser _availableArchiveParser;
-
-    public ListHandler(IAnsiConsole console, AvailableArchiveParser availableArchiveParser)
-    {
-        _console = console;
-        _availableArchiveParser = availableArchiveParser;
-    }
-
     public override async Task<int> ExecuteAsync(CommandContext context, ListOptions request)
     {
         var cancellationToken = new CancellationToken();
 
         var pattern = request.Pattern ?? "";
-        var results = await _availableArchiveParser.Get(cancellationToken);
+        var results = await availableArchiveParser.Get(cancellationToken);
 
         var table = new Table().NoBorder().Expand().HideHeaders();
         table.AddColumn(new TableColumn("Short Name"));
@@ -65,7 +57,7 @@ public class ListHandler : AsyncCommand<ListOptions>
             table.AddRow(new Markup($"[white]{archive.ShortName}[/]"), innerTable);
         }
 
-        _console.Write(table);
+        console.Write(table);
 
         return await Task.FromResult(0);
     }

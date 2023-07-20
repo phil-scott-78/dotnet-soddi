@@ -2,50 +2,29 @@
 
 namespace Soddi.Services;
 
-public class Archive
+public class Archive(string shortName, string longName, List<Archive.UriWithSize> uris)
 {
-    public string ShortName { get; }
-    public string LongName { get; }
-    public List<UriWithSize> Uris { get; }
+    public string ShortName { get; } = shortName;
+    public string LongName { get; } = longName;
+    public List<UriWithSize> Uris { get; } = uris;
 
-    public Archive(string shortName, string longName, List<UriWithSize> uris)
+    public class UriWithSize(Uri uri, long sizeInBytes, IFileSystem? fileSystem = null)
     {
-        ShortName = shortName;
-        LongName = longName;
-        Uris = uris;
-    }
+        private readonly IFileSystem _fileSystem = fileSystem ?? new FileSystem();
 
-    public class UriWithSize
-    {
-        private readonly IFileSystem _fileSystem;
-
-        public Uri Uri { get; }
-        public long SizeInBytes { get; }
+        public Uri Uri { get; } = uri;
+        public long SizeInBytes { get; } = sizeInBytes;
 
         public string Description(bool includeFileSize = true)
         {
             var fileName = _fileSystem.Path.GetFileName(Uri.AbsolutePath);
             return includeFileSize ? $"{fileName} ({SizeInBytes.BytesToString()})" : fileName;
         }
-
-        public UriWithSize(Uri uri, long sizeInBytes, IFileSystem? fileSystem = null)
-        {
-            Uri = uri;
-            SizeInBytes = sizeInBytes;
-            _fileSystem = fileSystem ?? new FileSystem();
-        }
     }
 }
 
-public class AvailableArchiveParser
+public class AvailableArchiveParser(IAnsiConsole console)
 {
-    private readonly IAnsiConsole _console;
-
-    public AvailableArchiveParser(IAnsiConsole console)
-    {
-        _console = console;
-    }
-
     public async Task<IEnumerable<Archive>> Get(CancellationToken cancellationToken)
     {
         const string BaseUrl = "https://archive.org/download/stackexchange/";
@@ -129,7 +108,7 @@ public class AvailableArchiveParser
             throw new SoddiException($"Could not find archive named {archiveItems}");
         }
 
-        var item = _console.Prompt(
+        var item = console.Prompt(
             new SelectionPrompt<ArchiveSelectionOption>()
                 .PageSize(10)
                 .Title("Pick an archive to download")

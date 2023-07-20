@@ -4,16 +4,11 @@ using Spectre.Console.Rendering;
 
 namespace Soddi.ProgressBar;
 
-internal sealed class TorrentBar : Renderable
+internal sealed class TorrentBar(BitSmuggler bitSmuggler) : Renderable
 {
     public int? Width { get; set; }
 
-    private readonly BitField _bits;
-
-    public TorrentBar(BitSmuggler bitSmuggler)
-    {
-        _bits = bitSmuggler.Bits;
-    }
+    private readonly BitField _bits = bitSmuggler.Bits;
 
     protected override Measurement Measure(RenderContext context, int maxWidth)
     {

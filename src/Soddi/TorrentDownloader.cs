@@ -4,17 +4,8 @@ using Soddi.ProgressBar;
 
 namespace Soddi;
 
-public class TorrentDownloader
+public class TorrentDownloader(IFileSystem fileSystem, IAnsiConsole console)
 {
-    private readonly IFileSystem _fileSystem;
-    private readonly IAnsiConsole _console;
-
-    public TorrentDownloader(IFileSystem fileSystem, IAnsiConsole console)
-    {
-        _fileSystem = fileSystem;
-        _console = console;
-    }
-
     public async Task<ImmutableList<string>> DownloadAsync(string url,
         bool enablePortForwarding,
         string outputPath,
@@ -31,10 +22,10 @@ public class TorrentDownloader
     {
         var stopWatch = Stopwatch.StartNew();
 
-        var paddingFolder = _fileSystem.Path.Combine(outputPath, ".____padding_file");
-        var doesPaddingFolderExistToStart = _fileSystem.Directory.Exists(paddingFolder);
+        var paddingFolder = fileSystem.Path.Combine(outputPath, ".____padding_file");
+        var doesPaddingFolderExistToStart = fileSystem.Directory.Exists(paddingFolder);
 
-        var progressBar = _console.Progress()
+        var progressBar = console.Progress()
             .AutoClear(false)
             .Columns(
                 new SpinnerColumn { CompletedText = Emoji.Known.CheckMark },
@@ -48,7 +39,7 @@ public class TorrentDownloader
         ImmutableList<ITorrentFileInfo>? downloadedFiles = null;
         await progressBar.StartAsync(async ctx =>
         {
-            _console.WriteLine("Loading torrent...");
+            console.WriteLine("Loading torrent...");
 
             var httpClient = new HttpClient();
             var torrentContents = await httpClient.GetByteArrayAsync(url, cancellationToken);
@@ -60,7 +51,7 @@ public class TorrentDownloader
                 AutoSaveLoadMagnetLinkMetadata = false,
             };
 
-            _console.WriteLine("Initializing BitTorrent engine...");
+            console.WriteLine("Initializing BitTorrent engine...");
             using var engine = new ClientEngine(settingBuilder.ToSettings());
             var torrent = await Torrent.LoadAsync(torrentContents);
             var settingsBuilder =
@@ -118,9 +109,9 @@ public class TorrentDownloader
                 // seem to have these padding files that sneak into the download even
                 // if they aren't included in the file list. not quite sure how to prevent that
                 // so I'm gonna delete them after the fact I guess
-                if (!doesPaddingFolderExistToStart && _fileSystem.Directory.Exists(paddingFolder))
+                if (!doesPaddingFolderExistToStart && fileSystem.Directory.Exists(paddingFolder))
                 {
-                    _fileSystem.Directory.Delete(paddingFolder, true);
+                    fileSystem.Directory.Delete(paddingFolder, true);
                 }
             }
             catch
@@ -136,9 +127,9 @@ public class TorrentDownloader
 
 
         stopWatch.Stop();
-        _console.MarkupLine($"Download complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
+        console.MarkupLine($"Download complete in [blue]{stopWatch.Elapsed.Humanize()}[/].");
 
-        return downloadedFiles?.Select(i => _fileSystem.Path.Combine(outputPath, i.Path)).ToImmutableList() ??
+        return downloadedFiles?.Select(i => fileSystem.Path.Combine(outputPath, i.Path)).ToImmutableList() ??
                ImmutableList<string>.Empty;
     }
 }

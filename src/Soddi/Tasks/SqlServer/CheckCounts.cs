@@ -2,17 +2,8 @@
 
 namespace Soddi.Tasks.SqlServer;
 
-public class CheckCounts : ITask
+public class CheckCounts(string connectionString, Action<string, long> setResult) : ITask
 {
-    private readonly string _connectionString;
-    private readonly Action<string, long> _setResult;
-
-    public CheckCounts(string connectionString, Action<string, long> setResult)
-    {
-        _connectionString = connectionString;
-        _setResult = setResult;
-    }
-
     public async Task GoAsync(IProgress<(string taskId, string message, double weight, double maxValue)> progress,
         CancellationToken cancellationToken)
     {
@@ -23,7 +14,7 @@ public class CheckCounts : ITask
         foreach (var table in tables)
         {
             var count = await GetCountFromDbAsync(table, cancellationToken);
-            _setResult(table, count);
+            setResult(table, count);
         }
     }
 
@@ -36,7 +27,7 @@ public class CheckCounts : ITask
     {
         return await RetryPolicy.Policy.ExecuteAsync(async () =>
         {
-            await using var sqlConn = new SqlConnection(_connectionString);
+            await using var sqlConn = new SqlConnection(connectionString);
             await sqlConn.OpenAsync(cancellationToken);
             var command = new SqlCommand($"SELECT COUNT_BIG(*) from {tableName}", sqlConn);
             return (long)await command.ExecuteScalarAsync(cancellationToken);

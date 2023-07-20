@@ -2,23 +2,14 @@
 
 namespace Soddi.Tasks.SqlServer;
 
-public class CreateSchema : ITask
+public class CreateSchema(string connectionString, bool includePostTags) : ITask
 {
-    private readonly string _connectionString;
-    private readonly bool _includePostTags;
-
-    public CreateSchema(string connectionString, bool includePostTags)
-    {
-        _connectionString = connectionString;
-        _includePostTags = includePostTags;
-    }
-
     public async Task GoAsync(IProgress<(string taskId, string message, double weight, double maxValue)> progress, CancellationToken cancellationToken)
     {
         await CheckIfAlreadyExists(cancellationToken);
 
         var statements = Sql.Split("GO");
-        await using var sqlConn = new SqlConnection(_connectionString);
+        await using var sqlConn = new SqlConnection(connectionString);
         await sqlConn.OpenAsync(cancellationToken);
 
         var incrementValue = GetTaskWeight() / statements.Length;
@@ -38,7 +29,7 @@ public class CreateSchema : ITask
     WHERE TABLE_SCHEMA = 'dbo' 
     AND  TABLE_NAME in ('Badges', 'Comments', 'LinkTypes', 'PostHistory', 'PostHistoryTypes', 'PostLinks', 'Posts', 'PostTypes', 'Tags', 'Users', 'Votes', 'VoteTypes')";
 
-        await using var sqlConn = new SqlConnection(_connectionString);
+        await using var sqlConn = new SqlConnection(connectionString);
         await sqlConn.OpenAsync(cancellationToken);
         await using var sqlCommand = new SqlCommand(sql, sqlConn);
 
@@ -52,7 +43,7 @@ public class CreateSchema : ITask
         if (tablesThatAlreadyExist.Count > 0)
         {
             throw new SoddiException(
-                $"Schema already exists in database {_connectionString}.\n\tTables: {string.Join(", ", tablesThatAlreadyExist)}.\n\nTo drop and recreate the database use the --dropAndCreate option");
+                $"Schema already exists in database {connectionString}.\n\tTables: {string.Join(", ", tablesThatAlreadyExist)}.\n\nTo drop and recreate the database use the --dropAndCreate option");
         }
     }
 
@@ -208,7 +199,7 @@ CREATE TABLE [dbo].[VoteTypes](
 GO
 ";
 
-            if (_includePostTags)
+            if (includePostTags)
             {
                 s += @"
 /****** Object:  Table [dbo].[PostTags]    Script Date: 9/15/2020 7:48:12 PM ******/

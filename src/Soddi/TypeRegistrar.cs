@@ -2,16 +2,10 @@
 
 namespace Soddi;
 
-public sealed class TypeRegistrar : ITypeRegistrar, IDisposable
+public sealed class TypeRegistrar(IServiceCollection builder) : ITypeRegistrar, IDisposable
 {
-    private IServiceCollection Services { get; }
-    private IList<IDisposable> BuiltProviders { get; }
-
-    public TypeRegistrar(IServiceCollection builder)
-    {
-        Services = builder;
-        BuiltProviders = new List<IDisposable>();
-    }
+    private IServiceCollection Services { get; } = builder;
+    private IList<IDisposable> BuiltProviders { get; } = new List<IDisposable>();
 
     public ITypeResolver Build()
     {
@@ -49,14 +43,9 @@ public sealed class TypeRegistrar : ITypeRegistrar, IDisposable
     }
 }
 
-public sealed class TypeResolver : ITypeResolver
+public sealed class TypeResolver(IServiceProvider provider) : ITypeResolver
 {
-    private readonly IServiceProvider _provider;
-
-    public TypeResolver(IServiceProvider provider)
-    {
-        _provider = provider ?? throw new ArgumentNullException(nameof(provider));
-    }
+    private readonly IServiceProvider _provider = provider ?? throw new ArgumentNullException(nameof(provider));
 
     public object? Resolve(Type? type)
     {

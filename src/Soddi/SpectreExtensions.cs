@@ -24,7 +24,7 @@ public static class SpectreExtensions
         return configurator;
     }
 
-    public static ICommandConfigurator WithExamples(
+    private static ICommandConfigurator WithExamples(
         this ICommandConfigurator command,
         IConfigurator configurator,
         IEnumerable<string[]> examples,

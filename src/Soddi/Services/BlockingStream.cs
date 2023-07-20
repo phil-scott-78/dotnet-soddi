@@ -9,15 +9,10 @@ public class BlockingStream : Stream
     record ByteWithLength(byte[] Data, int Length);
 
     private static readonly ArrayPool<byte> s_byteArrayPool = ArrayPool<byte>.Shared;
-    private readonly BlockingCollection<ByteWithLength> _blocks;
+    private readonly BlockingCollection<ByteWithLength> _blocks = new();
     private byte[]? _currentBlock;
     private int _currentBlockIndex;
     private int _currentBlockLength;
-
-    public BlockingStream()
-    {
-        _blocks = new BlockingCollection<ByteWithLength>();
-    }
 
     public override bool CanTimeout { get { return false; } }
     public override bool CanRead { get { return true; } }

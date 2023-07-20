@@ -28,21 +28,11 @@ public class TorrentOptions : BaseLoggingOptions
     };
 }
 
-public class TorrentHandler : AsyncCommand<TorrentOptions>
-{
-    private readonly AvailableArchiveParser _availableArchiveParser;
-    private readonly TorrentDownloader _torrentDownloader;
-    private readonly IFileSystem _fileSystem;
-    private readonly IAnsiConsole _console;
-
-    public TorrentHandler(IFileSystem fileSystem, IAnsiConsole console,
+public class TorrentHandler(IFileSystem fileSystem, IAnsiConsole console,
         AvailableArchiveParser availableArchiveParser)
-    {
-        _torrentDownloader = new TorrentDownloader(fileSystem, console);
-        _fileSystem = fileSystem;
-        _console = console;
-        _availableArchiveParser = availableArchiveParser;
-    }
+    : AsyncCommand<TorrentOptions>
+{
+    private readonly TorrentDownloader _torrentDownloader = new(fileSystem, console);
 
     public override async Task<int> ExecuteAsync(CommandContext context, TorrentOptions request)
     {
@@ -51,18 +41,18 @@ public class TorrentHandler : AsyncCommand<TorrentOptions>
         var outputPath = request.Output;
         if (string.IsNullOrWhiteSpace(outputPath))
         {
-            outputPath = _fileSystem.Directory.GetCurrentDirectory();
+            outputPath = fileSystem.Directory.GetCurrentDirectory();
         }
 
-        if (!_fileSystem.Directory.Exists(outputPath))
+        if (!fileSystem.Directory.Exists(outputPath))
         {
             throw new SoddiException($"Output path {outputPath} not found");
         }
 
-        _console.WriteLine("Finding archive files...");
+        console.WriteLine("Finding archive files...");
 
         var archiveUrls =
-            await _availableArchiveParser.FindOrPickArchive(request.Archive, request.Pick, cancellationToken);
+            await availableArchiveParser.FindOrPickArchive(request.Archive, request.Pick, cancellationToken);
 
 
         var potentialArchives = new List<string>();

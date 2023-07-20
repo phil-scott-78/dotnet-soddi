@@ -2,21 +2,12 @@
 
 namespace Soddi.Tasks.SqlServer;
 
-public class VerifyDatabaseExists : ITask
+public class VerifyDatabaseExists(string connectionString, string databaseName) : ITask
 {
-    private readonly string _connectionString;
-    private readonly string _databaseName;
-
-    public VerifyDatabaseExists(string connectionString, string databaseName)
-    {
-        _connectionString = connectionString;
-        _databaseName = databaseName;
-    }
-
     public async Task GoAsync(IProgress<(string taskId, string message, double weight, double maxValue)> progress, CancellationToken cancellationToken)
     {
-        var sql = $"select COUNT(*) from sys.databases where name = '{_databaseName}'";
-        await using var sqlConn = new SqlConnection(_connectionString);
+        var sql = $"select COUNT(*) from sys.databases where name = '{databaseName}'";
+        await using var sqlConn = new SqlConnection(connectionString);
         await using var sqlCommand = new SqlCommand(sql, sqlConn);
 
         await sqlConn.OpenAsync(cancellationToken);
@@ -25,7 +16,7 @@ public class VerifyDatabaseExists : ITask
         if (result == 0)
         {
             throw new SoddiException(
-                $"Database {_databaseName} does not exists.\nDatabase must exist, or use the --dropAndCreate option to build a default database.");
+                $"Database {databaseName} does not exists.\nDatabase must exist, or use the --dropAndCreate option to build a default database.");
         }
     }
 
@@ -35,21 +26,12 @@ public class VerifyDatabaseExists : ITask
     }
 }
 
-public class CreateDatabase : ITask
+public class CreateDatabase(string connectionString, string databaseName) : ITask
 {
-    private readonly string _connectionString;
-    private readonly string _databaseName;
-
-    public CreateDatabase(string connectionString, string databaseName)
-    {
-        _connectionString = connectionString;
-        _databaseName = databaseName;
-    }
-
     public async Task GoAsync(IProgress<(string taskId, string message, double weight, double maxValue)> progress, CancellationToken cancellationToken)
     {
-        var statements = Sql.Replace("DummyDatabaseName", _databaseName).Split("GO");
-        await using var sqlConn = new SqlConnection(_connectionString);
+        var statements = Sql.Replace("DummyDatabaseName", databaseName).Split("GO");
+        await using var sqlConn = new SqlConnection(connectionString);
         await sqlConn.OpenAsync(cancellationToken);
 
         var incrementValue = GetTaskWeight() / statements.Length;
