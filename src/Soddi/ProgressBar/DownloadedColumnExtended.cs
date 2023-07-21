@@ -13,9 +13,9 @@ public sealed class DownloadedColumnExtended : ProgressColumn
     /// Gets or sets the <see cref="CultureInfo"/> to use.
     /// </summary>
     public CultureInfo? Culture { get; set; }
-
-    /// <inheritdoc/>
-    public override IRenderable Render(RenderContext context, ProgressTask task, TimeSpan deltaTime)
+    
+    /// <inheritdoc />
+    public override IRenderable Render(RenderOptions options, ProgressTask task, TimeSpan deltaTime)
     {
         var total = ByteSize.FromBytes(task.MaxValue);
         var cultureInfo = Culture ?? CultureInfo.CurrentCulture;
@@ -53,10 +53,5 @@ public sealed class DownloadedColumnExtended : ProgressColumn
             return new Markup(string.Format("{0:0.0}[grey]/[/]{1:0.0} [grey]{2}[/]", remainingValue,
                 total.LargestWholeNumberValue, total.LargestWholeNumberSymbol));
         }
-    }
-
-    public override int? GetColumnWidth(RenderContext context)
-    {
-        return 16;
     }
 }

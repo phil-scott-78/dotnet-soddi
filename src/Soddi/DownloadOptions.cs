@@ -2,7 +2,6 @@
 
 namespace Soddi;
 
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public class DownloadOptions : BaseLoggingOptions
 {
     [CommandArgument(0, "<ARCHIVE_NAME>")]

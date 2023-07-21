@@ -79,11 +79,11 @@ public class FolderProcessor(string path, IFileSystem? fileSystem = null) : IArc
         {
             yield return Batch(file);
         }
+    }
 
-        IEnumerable<(string fileName, Stream stream, long size)> Batch(string path)
-        {
-            var fileInfo = _fileSystem.FileInfo.FromFileName(path);
-            yield return (_fileSystem.Path.GetFileName(path).ToLowerInvariant(), fileInfo.OpenRead(), fileInfo.Length);
-        }
+    private IEnumerable<(string fileName, Stream stream, long size)> Batch(string path)
+    {
+        var fileInfo = _fileSystem.FileInfo.New(path);
+        yield return (_fileSystem.Path.GetFileName(path).ToLowerInvariant(), fileInfo.OpenRead(), fileInfo.Length);
     }
 }

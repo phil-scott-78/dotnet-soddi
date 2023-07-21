@@ -44,7 +44,7 @@ public class InsertData(string connectionString, string dbName, IArchivedDataPro
                         Math.Max(estRowsPerFile, totalBatchCount + 1)));
                 });
 
-                var decrypt = stream.CopyToAsync(blockingStream, token).ContinueWith((task, o) =>
+                var decrypt = stream.CopyToAsync(blockingStream, token).ContinueWith((_, _) =>
                 {
                     blockingStream.CompleteWriting();
                     postTagDataReader?.NoMoreRecords();

@@ -1,0 +1,13 @@
+<assembly name="Spectre.Console.Cli">
+    <member name="T:Spectre.Console.Cli.AsyncCommand`1">
+        <attribute ctor="M:JetBrains.Annotations.UsedImplicitlyAttribute.#ctor(JetBrains.Annotations.ImplicitUseTargetFlags)" >
+            <argument>5</argument>
+        </attribute>
+    </member>
+    <member name="T:Spectre.Console.Cli.CommandSettings">
+        <attribute ctor="M:JetBrains.Annotations.UsedImplicitlyAttribute.#ctor(JetBrains.Annotations.ImplicitUseTargetFlags)" >
+            <argument>6</argument>
+        </attribute>
+    </member>
+</assembly>
+

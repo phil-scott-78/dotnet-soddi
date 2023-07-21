@@ -2,7 +2,6 @@
 
 namespace Soddi;
 
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public class TorrentOptions : BaseLoggingOptions
 {
     [CommandArgument(0, "<ARCHIVE_NAME>")]
@@ -32,8 +31,6 @@ public class TorrentHandler(IFileSystem fileSystem, IAnsiConsole console,
         AvailableArchiveParser availableArchiveParser)
     : AsyncCommand<TorrentOptions>
 {
-    private readonly TorrentDownloader _torrentDownloader = new(fileSystem, console);
-
     public override async Task<int> ExecuteAsync(CommandContext context, TorrentOptions request)
     {
         var cancellationToken = new CancellationToken();
@@ -69,8 +66,9 @@ public class TorrentHandler(IFileSystem fileSystem, IAnsiConsole console,
         }
 
         const string Url = "https://archive.org/download/stackexchange/stackexchange_archive.torrent";
+        var torrentDownloader = new TorrentDownloader(fileSystem, console);
 
-        await _torrentDownloader.DownloadAsync(Url, potentialArchives, request.EnablePortForwarding, outputPath,
+        await torrentDownloader.DownloadAsync(Url, potentialArchives, request.EnablePortForwarding, outputPath,
             cancellationToken);
         return await Task.FromResult(0);
     }

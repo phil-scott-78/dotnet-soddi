@@ -7,5 +7,5 @@ namespace Soddi.Tasks.SqlServer;
 public static class RetryPolicy
 {
     public static readonly AsyncRetryPolicy Policy = Polly.Policy.Handle<SqlException>()
-        .WaitAndRetryForeverAsync(_ => TimeSpan.FromMilliseconds(500), (ex, _, _) => { });
+        .WaitAndRetryForeverAsync(_ => TimeSpan.FromMilliseconds(500), (_, _, _) => { });
 }

@@ -6,7 +6,7 @@ internal sealed class TorrentProgressBarColumn : ProgressColumn
 {
     public int? Width { get; set; } = 40;
 
-    public override IRenderable Render(RenderContext context, ProgressTask task, TimeSpan deltaTime)
+    public override IRenderable Render(RenderOptions options, ProgressTask task, TimeSpan deltaTime)
     {
         var bits = task.State.Get<BitSmuggler>("torrentBits");
         return new TorrentBar(bits) { Width = Width };
