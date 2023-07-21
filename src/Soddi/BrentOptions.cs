@@ -4,7 +4,6 @@ using SharpCompress.Common;
 
 namespace Soddi;
 
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public class BrentOptions : BaseLoggingOptions
 {
     [CommandArgument(0, "[ARCHIVE_NAME]")]

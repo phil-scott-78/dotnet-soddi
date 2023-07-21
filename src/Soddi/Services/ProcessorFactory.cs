@@ -7,7 +7,7 @@ public class ProcessorFactory(IFileSystem fileSystem)
     {
         if (fileSystem.File.Exists(requestPath))
         {
-            var fileInfo = fileSystem.FileInfo.FromFileName(requestPath);
+            var fileInfo = fileSystem.FileInfo.New(requestPath);
 
             // quick check on the extension, we'll verify contents later
             if (fileInfo.Extension.Equals(".7z", StringComparison.InvariantCultureIgnoreCase) == false)
@@ -31,7 +31,7 @@ public class ProcessorFactory(IFileSystem fileSystem)
         };
         // if they passed in a directory let's figure out if it's a collection
         // of xml files or maybe a collection of .7z files
-        var directory = fileSystem.DirectoryInfo.FromDirectoryName(requestPath);
+        var directory = fileSystem.DirectoryInfo.New(requestPath);
         var xmlFiles = directory.GetFiles("*.xml").ToArray();
         var sevenFiles = directory.GetFiles("*.7z").ToArray();
         if (sevenFiles.Length > 0 && xmlFiles.Length > 0)

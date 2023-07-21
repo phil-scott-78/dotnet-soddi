@@ -6,5 +6,6 @@
     "Shouldly",
     "Soddi",
     "Xunit"
-  ]
+  ],
+  "dotnet.defaultSolution": "dotnet-soddi.sln"
 }

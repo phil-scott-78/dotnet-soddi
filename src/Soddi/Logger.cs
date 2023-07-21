@@ -53,7 +53,16 @@ public ref struct LogInterpolatedStringHandler
     public LogInterpolatedStringHandler(int literalLength, int formattedCount, Logger logger, LogLevel logLevel)
     {
         var enabled = logger.EnabledLevel >= logLevel;
-        _builder = enabled ? new StringBuilder(literalLength) : null;
+        if (enabled)
+        {
+            _builder = formattedCount == 0 
+                ? new StringBuilder(literalLength) 
+                : new StringBuilder(literalLength + formattedCount);
+        }
+        else
+        {
+            _builder = null;
+        }
     }
 
     public void AppendLiteral(string s)

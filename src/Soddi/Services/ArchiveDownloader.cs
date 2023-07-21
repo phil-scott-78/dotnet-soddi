@@ -25,7 +25,7 @@ public class ArchiveDownloader(string outputPath, IProgress<(int downloadedInKb,
 
         await using var fileStream = _fileSystem
             .FileStream
-            .Create(filename, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, true);
+            .New(filename, FileMode.Create, FileAccess.Write, FileShare.None, BufferSize, true);
 
         do
         {

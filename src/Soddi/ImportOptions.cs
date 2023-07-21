@@ -5,7 +5,6 @@ using Soddi.Tasks.SqlServer;
 
 namespace Soddi;
 
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public class ImportOptions : BaseLoggingOptions
 {
     [CommandArgument(0, "<PATH>")]

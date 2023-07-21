@@ -11,8 +11,9 @@ Console.OutputEncoding = Encoding.UTF8;
 //args = new[] { "torrent", "codegolf", "-p" };
 // args = new[] { "torrent", "space,sports,travel" };
 //args = new[] { "brent" };
-//args = new[] { "torrent", "sports" };
-args = new[] { "import", @"travel", "--dropAndCreate", "-l", "t" };
+// args = new[] { "torrent", "math" };
+args = new[] { "import", @"math", "--dropAndCreate" };
+// args = new[] { "import", @"travel", "--dropAndCreate", "-l", "t" };
 // args = new[] { "import", @"travel", "--dropAndCreate", "--sequential" };
 // args = new[] { "list", "-h" };
 #endif

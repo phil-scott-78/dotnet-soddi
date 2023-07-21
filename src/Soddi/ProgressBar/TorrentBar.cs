@@ -4,25 +4,17 @@ using Spectre.Console.Rendering;
 
 namespace Soddi.ProgressBar;
 
-internal sealed class TorrentBar(BitSmuggler bitSmuggler) : Renderable
+internal sealed class TorrentBar : Renderable
 {
     public int? Width { get; set; }
 
-    private readonly BitField _bits = bitSmuggler.Bits;
+    private readonly BitField _bits;
 
-    protected override Measurement Measure(RenderContext context, int maxWidth)
+    public TorrentBar(BitSmuggler bitSmuggler)
     {
-        var width = Math.Min(Width ?? maxWidth, maxWidth);
-        return new Measurement(4, width);
+        _bits = bitSmuggler.Bits;
     }
-
-    protected override IEnumerable<Segment> Render(RenderContext context, int maxWidth)
-    {
-        var width = Math.Min(Width ?? maxWidth, maxWidth);
-
-        return ExpandTheBitsRender(width);
-    }
-
+    
     private IEnumerable<Segment> ExpandTheBitsRender(int maxWidth)
     {
         var bits = BitAverage.Average(_bits.ToList(), maxWidth * 8);
@@ -71,5 +63,12 @@ internal sealed class TorrentBar(BitSmuggler bitSmuggler) : Renderable
 
         var segment = new Segment(DotPattern.Get(new BitArray(chunk.Select(i => i > MinimumValueToConsiderDownloaded).ToArray())).ToString(), style);
         return segment;
+    }
+
+    protected override IEnumerable<Segment> Render(RenderOptions options, int maxWidth)
+    {
+        var width = Math.Min(Width ?? maxWidth, maxWidth);
+
+        return ExpandTheBitsRender(width);
     }
 }

@@ -51,7 +51,7 @@ public class DatabaseHelper(IFileSystem fileSystem)
 
         if (fileSystem.Directory.Exists(path))
         {
-            return fileSystem.DirectoryInfo.FromDirectoryName(path).Name;
+            return fileSystem.DirectoryInfo.New(path).Name;
         }
 
         if (fileSystem.File.Exists(path))

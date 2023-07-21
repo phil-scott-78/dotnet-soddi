@@ -2,7 +2,6 @@
 
 namespace Soddi;
 
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public abstract class BaseLoggingOptions : CommandSettings
 {
     [CommandOption("-l|--logLevel")]

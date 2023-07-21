@@ -24,12 +24,10 @@ public static class SpectreExtensions
         return configurator;
     }
 
-    private static ICommandConfigurator WithExamples(
-        this ICommandConfigurator command,
+    private static void WithExamples(this ICommandConfigurator command,
         IConfigurator configurator,
         IEnumerable<string[]> examples,
-        bool isHidden = false
-    )
+        bool isHidden = false)
     {
         var isFirst = true;
         foreach (var example in examples)
@@ -46,7 +44,5 @@ public static class SpectreExtensions
 
             command.WithExample(example);
         }
-
-        return command;
     }
 }

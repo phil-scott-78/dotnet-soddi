@@ -16,7 +16,8 @@ public class AddConstraints(string connectionString) : ITask
         foreach (var statement in statements)
         {
             progress.Report(("add-constraints", "Adding constraints", taskIncrement, GetTaskWeight()));
-            await using var command = new SqlCommand(statement, sqlConn) { CommandTimeout = 3600 };
+            await using var command = new SqlCommand(statement, sqlConn);
+            command.CommandTimeout = 3600;
             await command.ExecuteNonQueryAsync(cancellationToken);
         }
     }

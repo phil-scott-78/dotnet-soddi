@@ -92,15 +92,16 @@ public class SqlServerBulkInserter(string connectionString,
                     Log.Write(LogLevel.Trace, $"Clearing DB for {tableName} of {sequence.Count} buffered values.");
                 }
 
-                while (sequence.Any())
+                while (sequence.Count > 0)
                 {
-                    var batch = sequence.Take(1000).ToList();
+                    const int CleanupDataBatchSize = 1000;
+                    var batch = sequence.Take(CleanupDataBatchSize).ToList();
                     var conditional = string.Join(" or ", batch);
                     var sql = $"DELETE FROM [{tableName}] WHERE {conditional}";
                     await using var sqlCommand = new SqlCommand(sql, sqlConn);
                     var result = await sqlCommand.ExecuteNonQueryAsync(cancellationToken);
                     Log.Write(LogLevel.Trace, $"Deleted {result} from {tableName}.");
-                    sequence = sequence.Skip(1000).ToList();
+                    sequence = sequence.Skip(CleanupDataBatchSize).ToList();
                 }
             }
 

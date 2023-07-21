@@ -2,7 +2,6 @@
 
 namespace Soddi;
 
-[UsedImplicitly(ImplicitUseTargetFlags.WithMembers)]
 public class ListOptions : BaseLoggingOptions
 {
     [CommandArgument(0, "[PATTERN]")]
@@ -67,6 +66,6 @@ public static class FileSizeHelper
 {
     public static string BytesToString(this long byteCount)
     {
-        return byteCount.Bytes().ToString();
+        return byteCount.Bytes().ToString() ?? string.Empty;
     }
 }
