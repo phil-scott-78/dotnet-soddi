@@ -75,7 +75,7 @@ CREATE TABLE [dbo].[Comments](
 	[Score] [int] NULL,
 	[Text] [nvarchar](700) NOT NULL,
 	[UserId] [int] NULL,
-    [ContentLicense] [nvarchar](250) NOT NULL,
+    [ContentLicense] [nvarchar](250) NULL DEFAULT 'CC BY-SA 4.0',
 ) ON [PRIMARY]
 GO
 
@@ -97,7 +97,7 @@ CREATE TABLE [dbo].[PostHistory](
 	[UserDisplayName] [nvarchar](40) NULL,
 	[Comment] [ntext] NULL,
 	[Text] [ntext] NULL,
-    [ContentLicense] [nvarchar](250) NULL,
+    [ContentLicense] [nvarchar](250) NULL DEFAULT 'CC BY-SA 4.0',
 ) ON [PRIMARY] TEXTIMAGE_ON [PRIMARY]
 GO
 
@@ -127,7 +127,7 @@ CREATE TABLE [dbo].[Posts](
 	[ClosedDate] [datetime] NULL,
 	[CommentCount] [int] NULL,
 	[CommunityOwnedDate] [datetime] NULL,
-    [ContentLicense] [nvarchar](250) NOT NULL,
+    [ContentLicense] [nvarchar](250) NULL DEFAULT 'CC BY-SA 4.0',
 	[CreationDate] [datetime] NOT NULL,
 	[FavoriteCount] [int] NULL,
 	[LastActivityDate] [datetime] NOT NULL,

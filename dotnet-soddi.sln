@@ -17,6 +17,7 @@ ProjectSection(SolutionItems) = preProject
 	README.md = README.md
 	removeAndAddFromDotNetTools.cmd = removeAndAddFromDotNetTools.cmd
 	LICENSE = LICENSE
+	CLAUDE.md = CLAUDE.md
 EndProjectSection
 EndProject
 Global

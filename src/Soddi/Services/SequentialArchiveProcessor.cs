@@ -10,7 +10,9 @@ public class ParallelArchiveProcessor(string[] paths, IFileSystem? fileSystem = 
     {
         foreach (var path in paths)
         {
-            var allFiles = SevenZipArchive.Open(path).Entries.Select(i => i.Key);
+            var allFiles = SevenZipArchive.Open(path).Entries
+                .Where(i => i.Key != null)
+                .Select(i => i.Key!);
             foreach (var file in allFiles)
             {
                 yield return Batch(path, file);
@@ -23,7 +25,7 @@ public class ParallelArchiveProcessor(string[] paths, IFileSystem? fileSystem = 
             var archive = SevenZipArchive.Open(stream);
             var allArchiveEntries = archive.Entries.First(i => i.Key == entryFile);
             yield return (
-                allArchiveEntries.Key.ToLowerInvariant(),
+                allArchiveEntries.Key!.ToLowerInvariant(),
                 allArchiveEntries.OpenEntryStream(),
                 allArchiveEntries.Size);
         }
@@ -55,7 +57,12 @@ public class SequentialArchiveProcessor(string[] paths, IFileSystem? fileSystem 
                     continue;
                 }
 
-                var filename = allArchiveEntries.Entry.Key.ToLowerInvariant();
+                var filename = allArchiveEntries.Entry.Key?.ToLowerInvariant();
+                if (filename == null)
+                {
+                    continue;
+                }
+
                 var entryStream = allArchiveEntries.OpenEntryStream();
 
                 yield return (

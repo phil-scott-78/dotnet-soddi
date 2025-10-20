@@ -64,7 +64,7 @@ public class SqlServerBulkInserter(string connectionString,
                 {
                     bc.ColumnOrderHints.Add(new SqlBulkCopyColumnOrderHint("Id", SortOrder.Ascending));
                 }
-
+                
                 bc.ColumnMappings.Add(column, column);
             }
 

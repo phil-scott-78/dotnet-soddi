@@ -18,10 +18,16 @@ public class DatabaseHelper(IFileSystem fileSystem)
     {
         try
         {
-            var master = new SqlConnectionStringBuilder(connectionString) { InitialCatalog = "master" }
+            var master = new SqlConnectionStringBuilder(connectionString)
+                {
+                    InitialCatalog = "master"
+                }
                 .ConnectionString;
 
-            var database = new SqlConnectionStringBuilder(connectionString) { InitialCatalog = databaseName }
+            var database = new SqlConnectionStringBuilder(connectionString)
+                {
+                    InitialCatalog = databaseName
+                }
                 .ConnectionString;
 
             return (master, database);

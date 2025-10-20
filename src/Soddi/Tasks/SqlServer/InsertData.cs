@@ -2,8 +2,12 @@
 
 namespace Soddi.Tasks.SqlServer;
 
-public class InsertData(string connectionString, string dbName, IArchivedDataProcessor processor,
-        bool includePostTags, Action<string, long> reportCount)
+public class InsertData(
+    string connectionString,
+    string dbName,
+    IArchivedDataProcessor processor,
+    bool includePostTags,
+    Action<string, long> reportCount)
     : ITask
 {
     public async Task GoAsync(IProgress<(string taskId, string message, double weight, double maxValue)> progress,
@@ -54,7 +58,7 @@ public class InsertData(string connectionString, string dbName, IArchivedDataPro
                 if (postTagDataReader != null)
                 {
                     var postTagInserter = new SqlServerBulkInserter(connectionString, dbName, _ => { });
-                    postTagTask = postTagInserter.InsertAsync(postTagDataReader, "PostTags.xml", cancellationToken);
+                    postTagTask = postTagInserter.InsertAsync(postTagDataReader, "PostTags.xml", token);
                 }
 
                 var dataReader = blockingStream
@@ -63,7 +67,7 @@ public class InsertData(string connectionString, string dbName, IArchivedDataPro
                         postAndTag => postTagDataReader?.Push(postAndTag.postId, postAndTag.tags)
                     );
 
-                await inserter.InsertAsync(dataReader, fileName, cancellationToken);
+                await inserter.InsertAsync(dataReader, fileName, token);
                 await decrypt;
 
                 // if we have a post tag reader make sure we close it so the queue gets cleared out

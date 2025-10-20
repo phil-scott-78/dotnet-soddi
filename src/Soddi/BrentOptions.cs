@@ -103,13 +103,15 @@ public class BrentHandler(IAnsiConsole console, TorrentDownloader torrentDownloa
                 using var stream = fileSystem.File.OpenRead(sevenZipFile);
                 using var sevenZipArchive = SevenZipArchive.Open(stream);
 
-                var tasks = sevenZipArchive.Entries.ToImmutableDictionary(
-                    e => e.Key,
-                    e => ctx.AddTask(e.Key, new ProgressTaskSettings { MaxValue = e.Size, AutoStart = false }));
+                var tasks = sevenZipArchive.Entries
+                    .Where(e => e.Key != null)
+                    .ToImmutableDictionary(
+                    e => e.Key!,
+                    e => ctx.AddTask(e.Key!, new ProgressTaskSettings { MaxValue = e.Size, AutoStart = false }));
 
-                foreach (var entry in sevenZipArchive.Entries)
+                foreach (var entry in sevenZipArchive.Entries.Where(e => e.Key != null))
                 {
-                    var currentTask = tasks[entry.Key];
+                    var currentTask = tasks[entry.Key!];
                     currentTask.StartTask();
                     var totalRead = 0L;
 
