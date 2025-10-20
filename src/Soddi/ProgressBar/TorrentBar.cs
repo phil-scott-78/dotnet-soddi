@@ -8,7 +8,7 @@ internal sealed class TorrentBar : Renderable
 {
     public int? Width { get; set; }
 
-    private readonly BitField _bits;
+    private readonly ReadOnlyBitField _bits;
 
     public TorrentBar(BitSmuggler bitSmuggler)
     {
@@ -17,7 +17,7 @@ internal sealed class TorrentBar : Renderable
     
     private IEnumerable<Segment> ExpandTheBitsRender(int maxWidth)
     {
-        var bits = BitAverage.Average(_bits.ToList(), maxWidth * 8);
+        var bits = BitAverage.Average(_bits.ToBoolArray(), maxWidth * 8);
         var segmentPos = 0;
         var segment = new decimal[8];
         foreach (var bit in bits)

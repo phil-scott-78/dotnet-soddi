@@ -36,7 +36,7 @@ public class TorrentDownloader(IFileSystem fileSystem, IAnsiConsole console)
                 new TransferSpeedColumn(),
                 new RemainingTimeColumn());
 
-        ImmutableList<ITorrentFileInfo>? downloadedFiles = null;
+        ImmutableList<ITorrentManagerFile>? downloadedFiles = null;
         await progressBar.StartAsync(async ctx =>
         {
             console.WriteLine("Loading torrent...");
