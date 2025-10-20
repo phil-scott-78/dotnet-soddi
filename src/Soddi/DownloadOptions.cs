@@ -25,12 +25,12 @@ public class DownloadOptions : BaseLoggingOptions
 
 [UsedImplicitly]
 public class DownloadHandler(IFileSystem fileSystem, IAnsiConsole console,
-        AvailableArchiveParser availableArchiveParser)
+    AvailableArchiveParser availableArchiveParser)
     : AsyncCommand<DownloadOptions>
 {
     public override async Task<int> ExecuteAsync(CommandContext context, DownloadOptions request)
     {
-        var cancellationToken = new CancellationToken();
+        var cancellationToken = CancellationToken.None;
 
         var outputPath = request.Output;
         if (string.IsNullOrWhiteSpace(outputPath))

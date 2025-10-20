@@ -28,7 +28,7 @@ public class TorrentOptions : BaseLoggingOptions
 }
 
 public class TorrentHandler(IFileSystem fileSystem, IAnsiConsole console,
-        AvailableArchiveParser availableArchiveParser)
+    AvailableArchiveParser availableArchiveParser)
     : AsyncCommand<TorrentOptions>
 {
     public override async Task<int> ExecuteAsync(CommandContext context, TorrentOptions request)

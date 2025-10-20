@@ -9,10 +9,10 @@ Console.OutputEncoding = Encoding.UTF8;
 // args = new[] { "list" };
 // args = new[] { "download", "sp", "-p" };
 //args = new[] { "torrent", "codegolf", "-p" };
-// args = new[] { "torrent", "space,sports,travel" };
+args = new[] { "torrent", "space,sports,travel" };
 //args = new[] { "brent" };
 // args = new[] { "torrent", "math" };
-args = new[] { "import", @"math", "--dropAndCreate" };
+// args = new[] { "import", @"travel", "--dropAndCreate", "-c", "Server=localhost;Database=math;User Id=sa;Password=P@ssw0rd;TrustServerCertificate=True" };
 // args = new[] { "import", @"travel", "--dropAndCreate", "-l", "t" };
 // args = new[] { "import", @"travel", "--dropAndCreate", "--sequential" };
 // args = new[] { "list", "-h" };
@@ -20,7 +20,7 @@ args = new[] { "import", @"math", "--dropAndCreate" };
 
 var container = new ServiceCollection()
     .AddSingleton<IFileSystem>(new FileSystem())
-    .Scan(scan => scan.FromCallingAssembly().AddClasses());
+    .Scan(scan => scan.FromApplicationDependencies().AddClasses());
 
 var registrar = new TypeRegistrar(container);
 var app = new CommandApp(registrar);

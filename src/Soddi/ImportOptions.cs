@@ -52,7 +52,7 @@ public class ImportOptions : BaseLoggingOptions
 record ImportSummary(long XmlRowsRead, long CountFromDb);
 
 public class ImportHandler(DatabaseHelper databaseHelper, ProcessorFactory processorFactory, IFileSystem fileSystem,
-        AvailableArchiveParser availableArchiveParser, IAnsiConsole console)
+    AvailableArchiveParser availableArchiveParser, IAnsiConsole console)
     : AsyncCommand<ImportOptions>
 {
     private async Task<string> CheckAndFixupPath(string path, CancellationToken token)

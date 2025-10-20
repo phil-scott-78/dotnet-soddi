@@ -88,9 +88,9 @@ public class FolderProcessor(string path, IFileSystem? fileSystem = null) : IArc
         }
     }
 
-    private IEnumerable<(string fileName, Stream stream, long size)> Batch(string path)
+    private IEnumerable<(string fileName, Stream stream, long size)> Batch(string batchPath)
     {
-        var fileInfo = _fileSystem.FileInfo.New(path);
-        yield return (_fileSystem.Path.GetFileName(path).ToLowerInvariant(), fileInfo.OpenRead(), fileInfo.Length);
+        var fileInfo = _fileSystem.FileInfo.New(batchPath);
+        yield return (_fileSystem.Path.GetFileName(batchPath).ToLowerInvariant(), fileInfo.OpenRead(), fileInfo.Length);
     }
 }

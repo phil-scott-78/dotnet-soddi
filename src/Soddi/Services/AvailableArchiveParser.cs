@@ -31,8 +31,8 @@ public class AvailableArchiveParser(IAnsiConsole console)
         const string DownloadUrl = BaseUrl + "stackexchange_files.xml";
 
         var client = new HttpClient();
-        using var response = client
-            .GetAsync(DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken).Result;
+        using var response = await client
+            .GetAsync(DownloadUrl, HttpCompletionOption.ResponseHeadersRead, cancellationToken);
         var stream = await response.Content.ReadAsStreamAsync(cancellationToken);
 
         var doc = await XDocument.LoadAsync(stream, LoadOptions.None, cancellationToken);
@@ -95,7 +95,7 @@ public class AvailableArchiveParser(IAnsiConsole console)
         if (archivesToDownload.Count > 0)
             return archivesToDownload;
 
-        if (canUserPick == false)
+        if (!canUserPick)
         {
             throw new SoddiException($"Could not find archive named {archiveItems}");
         }
@@ -103,7 +103,7 @@ public class AvailableArchiveParser(IAnsiConsole console)
         var filteredResults = results.Where(i =>
             i.ShortName.Contains(archiveItems, StringComparison.InvariantCultureIgnoreCase)).ToList();
 
-        if (filteredResults.Any() == false)
+        if (filteredResults.Count == 0)
         {
             throw new SoddiException($"Could not find archive named {archiveItems}");
         }
@@ -113,7 +113,7 @@ public class AvailableArchiveParser(IAnsiConsole console)
                 .PageSize(10)
                 .Title("Pick an archive to download")
                 .AddChoices(filteredResults
-                    .Where(i => i.ShortName.Contains("meta.", StringComparison.InvariantCultureIgnoreCase) == false)
+                    .Where(i => !i.ShortName.Contains("meta.", StringComparison.InvariantCultureIgnoreCase))
                     .Select(ArchiveSelectionOption.FromArchive)));
 
         return results
@@ -125,7 +125,7 @@ public class AvailableArchiveParser(IAnsiConsole console)
     private static string StripDashName(string input)
     {
         var index = input.IndexOf("-", StringComparison.Ordinal);
-        return index < 0 ? input : input.Substring(0, index);
+        return index < 0 ? input : input[..index];
     }
 }
 
