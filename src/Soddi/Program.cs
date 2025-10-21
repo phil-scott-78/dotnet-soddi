@@ -2,20 +2,7 @@ using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Soddi;
 
-#if DEBUG
 Console.OutputEncoding = Encoding.UTF8;
-
-// args = new[] { "import", @"C:\Users\phils\Downloads\aviation.stackexchange.com\", "--dropAndCreate" };
-// args = new[] { "list" };
-// args = new[] { "download", "sp", "-p" };
-//args = new[] { "torrent", "codegolf", "-p" };
-//args = new[] { "torrent", "space,sports,travel" };
-//args = new[] { "brent" };
-// args = new[] { "torrent", "math" };
-// args = new[] { "import", @"travel", "--dropAndCreate", "-l", "t" };
-// args = new[] { "import", @"travel", "--dropAndCreate", "--sequential" };
-// args = new[] { "list", "-h" };
-#endif
 
 var container = new ServiceCollection()
     .AddSingleton<IFileSystem>(new FileSystem())
@@ -55,4 +42,3 @@ catch (Exception e)
 }
 
 return 0;
-

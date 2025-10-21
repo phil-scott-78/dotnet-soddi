@@ -9,10 +9,10 @@ namespace Soddi.Tests;
 
 public class CreateProcessorTests
 {
-    private static readonly string[] s_expectedFiles = new[]
-    {
+    private static readonly string[] s_expectedFiles =
+    [
         "badges", "comments", "posthistory", "postlinks", "posts", "tags", "users", "votes"
-    };
+    ];
 
     [Fact]
     public void Missing_path_throws_exception()

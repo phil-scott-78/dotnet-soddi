@@ -7,10 +7,10 @@ namespace Soddi.Tests;
 
 public class ProcessorTests
 {
-    private static readonly string[] s_expectedFiles = new[]
-    {
+    private static readonly string[] s_expectedFiles =
+    [
         "badges", "comments", "posthistory", "postlinks", "posts", "tags", "users", "votes"
-    };
+    ];
 
     [Fact]
     public void Can_process_folder()
@@ -24,7 +24,7 @@ public class ProcessorTests
     [Fact]
     public void Can_process_seven_zip()
     {
-        var processor = new SequentialArchiveProcessor(new[] { "test-files/eosio.meta.stackexchange.com.7z" });
+        var processor = new SequentialArchiveProcessor(["test-files/eosio.meta.stackexchange.com.7z"]);
 
         processor.GetFiles().First().Select(i => i.fileName)
             .ShouldBe(s_expectedFiles.Select(i => i + ".xml"), true);

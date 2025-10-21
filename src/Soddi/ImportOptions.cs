@@ -43,10 +43,10 @@ public class ImportOptions : BaseLoggingOptions
     public bool Sequential { get; set; }
 
     public static readonly string[][] Examples =
-    {
-        new[] { "import", "iota" }, new[] { "import", "iota.stackexchange.co.7z", "--dropAndCreate" },
-        new[] { "import", "/data/iota.stackexchange.co/", "--skipTags" },
-    };
+    [
+        ["import", "iota"], ["import", "iota.stackexchange.co.7z", "--dropAndCreate"],
+        ["import", "/data/iota.stackexchange.co/", "--skipTags"]
+    ];
 }
 
 record ImportSummary(long XmlRowsRead, long CountFromDb);
@@ -77,7 +77,7 @@ public class ImportHandler(DatabaseHelper databaseHelper, ProcessorFactory proce
 
     public override async Task<int> ExecuteAsync(CommandContext context, ImportOptions request)
     {
-        var cancellationToken = new CancellationToken();
+        var cancellationToken = CancellationToken.None;
 
         var requestPath = await CheckAndFixupPath(request.Path, cancellationToken);
         var dbName = databaseHelper.GetDbNameFromPathOption(request.DatabaseName, requestPath);

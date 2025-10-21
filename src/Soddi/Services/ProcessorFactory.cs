@@ -16,8 +16,8 @@ public class ProcessorFactory(IFileSystem fileSystem)
             }
 
             return processSequentially
-                ? new SequentialArchiveProcessor(new[] { requestPath }, fileSystem)
-                : new ParallelArchiveProcessor(new[] { requestPath }, fileSystem);
+                ? new SequentialArchiveProcessor([requestPath], fileSystem)
+                : new ParallelArchiveProcessor([requestPath], fileSystem);
         }
 
         if (!fileSystem.Directory.Exists(requestPath))

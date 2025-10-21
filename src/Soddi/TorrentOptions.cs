@@ -21,10 +21,10 @@ public class TorrentOptions : BaseLoggingOptions
     public bool Pick { get; set; }
 
     public static readonly string[][] Examples =
-    {
-        new[] { "torrent", "iota" }, new[] { "torrent", "iota", "-o", "/data/" },
-        new[] { "torrent", "spa", "-p", "-f" }
-    };
+    [
+        ["torrent", "iota"], ["torrent", "iota", "-o", "/data/"],
+        ["torrent", "spa", "-p", "-f"]
+    ];
 }
 
 public class TorrentHandler(IFileSystem fileSystem, IAnsiConsole console,
@@ -33,7 +33,7 @@ public class TorrentHandler(IFileSystem fileSystem, IAnsiConsole console,
 {
     public override async Task<int> ExecuteAsync(CommandContext context, TorrentOptions request)
     {
-        var cancellationToken = new CancellationToken();
+        var cancellationToken = CancellationToken.None;
 
         var outputPath = request.Output;
         if (string.IsNullOrWhiteSpace(outputPath))
@@ -55,14 +55,13 @@ public class TorrentHandler(IFileSystem fileSystem, IAnsiConsole console,
         var potentialArchives = new List<string>();
         foreach (var archiveUrl in archiveUrls)
         {
-            potentialArchives.AddRange(new[]
-            {
+            potentialArchives.AddRange([
                 archiveUrl.LongName + ".7z", $"{archiveUrl.LongName}-Badges.7z",
                 $"{archiveUrl.LongName}-Comments.7z", $"{archiveUrl.LongName}-PostHistory.7z",
                 $"{archiveUrl.LongName}-PostLinks.7z", $"{archiveUrl.LongName}-Posts.7z",
                 $"{archiveUrl.LongName}-Tags.7z", $"{archiveUrl.LongName}-Users.7z",
                 $"{archiveUrl.LongName}-Votes.7z"
-            });
+            ]);
         }
 
         const string Url = "https://archive.org/download/stackexchange/stackexchange_archive.torrent";

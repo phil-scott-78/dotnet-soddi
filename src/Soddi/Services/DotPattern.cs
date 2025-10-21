@@ -9,11 +9,10 @@ public static class DotPattern
             throw new ArgumentOutOfRangeException(nameof(pattern), "Only 2x4 array sizes supported");
         }
 
-        return Get(new BitArray(new[]
-        {
+        return Get(new BitArray([
             pattern[0, 0], pattern[1, 0], pattern[2, 0], pattern[0, 1], pattern[1, 1], pattern[2, 1],
             pattern[3, 0], pattern[3, 1]
-        }));
+        ]));
     }
 
     /// <summary>
@@ -56,7 +55,7 @@ public static class DotPattern
     /// <returns></returns>
     public static char Get(byte pattern)
     {
-        return Get(new BitArray(new[] { pattern }));
+        return Get(new BitArray([pattern]));
     }
 
     /// <summary>
@@ -78,7 +77,7 @@ public static class DotPattern
     /// <returns></returns>
     public static char Get(bool one, bool two, bool three, bool four, bool five, bool six, bool seven, bool eight)
     {
-        return Get(new BitArray(new[] { one, two, three, four, five, six, seven, eight }));
+        return Get(new BitArray([one, two, three, four, five, six, seven, eight]));
     }
 
     private static readonly ImmutableDictionary<int, char> s_dots = new Dictionary<int, char>()

@@ -12,7 +12,7 @@ public class ListOptions : BaseLoggingOptions
     [Description("Include meta databases.")]
     public bool IncludeMeta { get; set; }
 
-    public static readonly string[][] Examples = { new[] { "list" }, new[] { "list", "spa" } };
+    public static readonly string[][] Examples = [["list"], ["list", "spa"]];
 }
 
 public class ListHandler(IAnsiConsole console, AvailableArchiveParser availableArchiveParser)
@@ -20,7 +20,7 @@ public class ListHandler(IAnsiConsole console, AvailableArchiveParser availableA
 {
     public override async Task<int> ExecuteAsync(CommandContext context, ListOptions request)
     {
-        var cancellationToken = new CancellationToken();
+        var cancellationToken = CancellationToken.None;
 
         var pattern = request.Pattern ?? "";
         var results = await availableArchiveParser.Get(cancellationToken);

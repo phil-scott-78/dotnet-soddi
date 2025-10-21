@@ -23,10 +23,10 @@ public class BrentOptions : BaseLoggingOptions
     public bool EnablePortForwarding { get; set; }
 
     public static readonly string[][] Examples =
-    {
-        new[] { "brent" }, new[] { "brent", "small" }, new[] { "brent", "medium" }, new[] { "brent", "large" },
-        new[] { "brent", "extra-large" },
-    };
+    [
+        ["brent"], ["brent", "small"], ["brent", "medium"], ["brent", "large"],
+        ["brent", "extra-large"]
+    ];
 }
 
 public class BrentHandler(IAnsiConsole console, TorrentDownloader torrentDownloader, IFileSystem fileSystem)
@@ -77,7 +77,7 @@ public class BrentHandler(IAnsiConsole console, TorrentDownloader torrentDownloa
         }
 
         var downloadedFiles = await torrentDownloader.DownloadAsync(archive.Url,
-            settings.EnablePortForwarding = settings.EnablePortForwarding,
+            settings.EnablePortForwarding,
             outputPath,
             CancellationToken.None);
 

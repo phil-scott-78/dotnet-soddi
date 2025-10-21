@@ -17,10 +17,10 @@ public class DownloadOptions : BaseLoggingOptions
     public bool Pick { get; set; }
 
     public static readonly string[][] Examples =
-    {
-        new[] { "download", "iota" }, new[] { "download", "iota", "-o", "\"/data/\"" },
-        new[] { "download", "spa", "-p" }
-    };
+    [
+        ["download", "iota"], ["download", "iota", "-o", "\"/data/\""],
+        ["download", "spa", "-p"]
+    ];
 }
 
 [UsedImplicitly]
