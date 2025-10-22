@@ -1,13 +1,14 @@
-﻿using System.Collections.Generic;
+using System.Collections.Generic;
 using System.IO;
 using System.IO.Abstractions.TestingHelpers;
 using Shouldly;
-using Soddi.Services;
+using Soddi.Providers.SqlServer;
+using Soddi.Providers.Postgres;
 using Xunit;
 
 namespace Soddi.Tests;
 
-public class DatabaseHelperTests
+public class SqlServerProviderTests
 {
     [Theory]
     [InlineData("Server=(local);Integrated Security=True",
@@ -24,8 +25,9 @@ public class DatabaseHelperTests
         "Data Source=(local);Initial Catalog=Aviation;User ID=myUsername;Password=myPassword")]
     public void Can_get_master_and_db_connection(string connString, string expectedMaster, string expectedDb)
     {
-        var db = new DatabaseHelper(new MockFileSystem());
-        var (master, database) = db.GetMasterAndDbConnectionStrings(connString, "Aviation");
+        var provider = new SqlServerProvider(new MockFileSystem());
+        var master = provider.GetMasterConnectionString(connString);
+        var database = provider.GetDatabaseConnectionString(connString, "Aviation");
         master.ShouldBe(expectedMaster);
         database.ShouldBe(expectedDb);
     }
@@ -33,42 +35,42 @@ public class DatabaseHelperTests
     [Fact]
     public void Bad_connection_string_throws_exception()
     {
-        var db = new DatabaseHelper(new MockFileSystem());
+        var provider = new SqlServerProvider(new MockFileSystem());
         Should.Throw<SoddiException>(() =>
         {
-            db.GetMasterAndDbConnectionStrings("test", "db");
+            provider.GetMasterConnectionString("test");
         });
     }
 
     [Fact]
     public void Can_guess_database_name_when_we_tell_it_the_database_name()
     {
-        var db = new DatabaseHelper(new MockFileSystem());
-        db.GetDbNameFromPathOption("Aviation", "data-files").ShouldBe("Aviation");
+        var provider = new SqlServerProvider(new MockFileSystem());
+        provider.GetDbNameFromPathOption("Aviation", "data-files").ShouldBe("Aviation");
     }
 
     [Fact]
     public void Can_guess_database_name_from_a_filename()
     {
-        var db = new DatabaseHelper(new MockFileSystem(
+        var provider = new SqlServerProvider(new MockFileSystem(
             new Dictionary<string, MockFileData>
             {
                 { "aviation.stackexchange.7z", new MockFileData("") }
             }
         ));
-        db.GetDbNameFromPathOption("", "aviation.stackexchange.7z").ShouldBe("aviation.stackexchange");
+        provider.GetDbNameFromPathOption("", "aviation.stackexchange.7z").ShouldBe("aviation.stackexchange");
     }
 
     [Fact]
     public void Can_guess_database_name_from_a_directory()
     {
-        var db = new DatabaseHelper(new MockFileSystem(
+        var provider = new SqlServerProvider(new MockFileSystem(
             new Dictionary<string, MockFileData>
             {
                 { "aviation.stackexchange/file.7z", new MockFileData("") }
             }
         ));
-        db.GetDbNameFromPathOption("", "aviation.stackexchange").ShouldBe("aviation.stackexchange");
+        provider.GetDbNameFromPathOption("", "aviation.stackexchange").ShouldBe("aviation.stackexchange");
     }
 
     [Fact]
@@ -78,13 +80,86 @@ public class DatabaseHelperTests
         {
             { "aviation.stackexchange/file.7z", new MockFileData("") }
         };
-        var db = new DatabaseHelper(new MockFileSystem(
-            files
-        ));
+        var provider = new SqlServerProvider(new MockFileSystem(files));
 
         Should.Throw<FileNotFoundException>(() =>
         {
-            db.GetDbNameFromPathOption("", "dummy.stackexchange");
+            provider.GetDbNameFromPathOption("", "dummy.stackexchange");
+        });
+    }
+}
+
+public class PostgresProviderTests
+{
+    [Theory]
+    [InlineData("Host=localhost;Username=soddi;Password=pass",
+        "Host=localhost;Username=soddi;Password=pass;Database=postgres",
+        "Host=localhost;Username=soddi;Password=pass;Database=Aviation")]
+    [InlineData("Host=localhost;Database=Northwind;Username=soddi;Password=pass",
+        "Host=localhost;Database=postgres;Username=soddi;Password=pass",
+        "Host=localhost;Database=Aviation;Username=soddi;Password=pass")]
+    public void Can_get_master_and_db_connection(string connString, string expectedMaster, string expectedDb)
+    {
+        var provider = new PostgresProvider(new MockFileSystem());
+        var master = provider.GetMasterConnectionString(connString);
+        var database = provider.GetDatabaseConnectionString(connString, "Aviation");
+        master.ShouldBe(expectedMaster);
+        database.ShouldBe(expectedDb);
+    }
+
+    [Fact]
+    public void Bad_connection_string_throws_exception()
+    {
+        var provider = new PostgresProvider(new MockFileSystem());
+        Should.Throw<SoddiException>(() =>
+        {
+            provider.GetMasterConnectionString("invalid connection string");
+        });
+    }
+
+    [Fact]
+    public void Can_guess_database_name_when_we_tell_it_the_database_name()
+    {
+        var provider = new PostgresProvider(new MockFileSystem());
+        provider.GetDbNameFromPathOption("Aviation", "data-files").ShouldBe("Aviation");
+    }
+
+    [Fact]
+    public void Can_guess_database_name_from_a_filename()
+    {
+        var provider = new PostgresProvider(new MockFileSystem(
+            new Dictionary<string, MockFileData>
+            {
+                { "aviation.stackexchange.7z", new MockFileData("") }
+            }
+        ));
+        provider.GetDbNameFromPathOption("", "aviation.stackexchange.7z").ShouldBe("aviation.stackexchange");
+    }
+
+    [Fact]
+    public void Can_guess_database_name_from_a_directory()
+    {
+        var provider = new PostgresProvider(new MockFileSystem(
+            new Dictionary<string, MockFileData>
+            {
+                { "aviation.stackexchange/file.7z", new MockFileData("") }
+            }
+        ));
+        provider.GetDbNameFromPathOption("", "aviation.stackexchange").ShouldBe("aviation.stackexchange");
+    }
+
+    [Fact]
+    public void Bad_path_throws_file_not_found()
+    {
+        var files = new Dictionary<string, MockFileData>
+        {
+            { "aviation.stackexchange/file.7z", new MockFileData("") }
+        };
+        var provider = new PostgresProvider(new MockFileSystem(files));
+
+        Should.Throw<FileNotFoundException>(() =>
+        {
+            provider.GetDbNameFromPathOption("", "dummy.stackexchange");
         });
     }
 }

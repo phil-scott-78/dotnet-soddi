@@ -1,7 +1,8 @@
 ﻿using Soddi.ProgressBar;
+using Soddi.Providers;
 using Soddi.Services;
 using Soddi.Tasks;
-using Soddi.Tasks.SqlServer;
+using Soddi.Tasks.Core;
 
 namespace Soddi;
 
@@ -20,6 +21,10 @@ public class ImportOptions : BaseLoggingOptions
     [Description(
         "Connection string to server. Initial catalog will be ignored and the database parameter will be used for the database name.")]
     public string ConnectionString { get; set; } = "Server=.;Integrated Security=true;TrustServerCertificate=True";
+
+    [CommandOption("--provider")]
+    [Description("Database provider to use (sqlserver, postgres, cosmos). Default: sqlserver")]
+    public string Provider { get; set; } = "sqlserver";
 
     [CommandOption("--dropAndCreate")]
     [Description(
@@ -51,8 +56,12 @@ public class ImportOptions : BaseLoggingOptions
 
 record ImportSummary(long XmlRowsRead, long CountFromDb);
 
-public class ImportHandler(DatabaseHelper databaseHelper, ProcessorFactory processorFactory, IFileSystem fileSystem,
-    AvailableArchiveParser availableArchiveParser, IAnsiConsole console)
+public class ImportHandler(
+    ProviderFactory providerFactory,
+    ProcessorFactory processorFactory,
+    IFileSystem fileSystem,
+    AvailableArchiveParser availableArchiveParser,
+    IAnsiConsole console)
     : AsyncCommand<ImportOptions>
 {
     private async Task<string> CheckAndFixupPath(string path, CancellationToken token)
@@ -80,40 +89,61 @@ public class ImportHandler(DatabaseHelper databaseHelper, ProcessorFactory proce
         var cancellationToken = CancellationToken.None;
 
         var requestPath = await CheckAndFixupPath(request.Path, cancellationToken);
-        var dbName = databaseHelper.GetDbNameFromPathOption(request.DatabaseName, requestPath);
+
+        // Get the database provider based on the --provider flag
+        var providerType = ProviderFactory.ParseProviderType(request.Provider);
+        var provider = providerFactory.GetProvider(providerType);
+
+        // Use provider methods to handle connection strings and database naming
+        var dbName = provider.GetDbNameFromPathOption(request.DatabaseName, requestPath);
+        var masterConnectionString = provider.GetMasterConnectionString(request.ConnectionString);
+        var databaseConnectionString = provider.GetDatabaseConnectionString(request.ConnectionString, dbName);
+
         var tasks = new Queue<(string name, ITask task)>();
-        var (masterConnectionString, databaseConnectionString) =
-            databaseHelper.GetMasterAndDbConnectionStrings(request.ConnectionString, dbName);
 
         var report = new ConcurrentDictionary<string, ImportSummary>();
 
         var processor = processorFactory.VerifyAndCreateProcessor(requestPath, request.Sequential);
 
+        // Get provider-specific services
+        var schemaManager = providerFactory.GetSchemaManager(providerType);
+        var dataInserter = providerFactory.GetDataInserter(providerType);
+        var typeValueInserter = providerFactory.GetTypeValueInserter(providerType);
+        var dataValidator = providerFactory.GetDataValidator(providerType);
+
         if (request.DropAndRecreate)
         {
-            tasks.Enqueue(("Create new database", new CreateDatabase(masterConnectionString, dbName)));
+            tasks.Enqueue(("Create new database", new CreateDatabaseTask(provider, masterConnectionString, dbName)));
         }
         else
         {
-            tasks.Enqueue(("Verify database exists", new VerifyDatabaseExists(masterConnectionString, dbName)));
+            tasks.Enqueue(("Verify database exists", new VerifyDatabaseExistsTask(provider, masterConnectionString, dbName)));
         }
 
-        tasks.Enqueue(("Create schema", new CreateSchema(databaseConnectionString, !request.SkipTags)));
+        tasks.Enqueue(("Create schema", new CreateSchemaTask(provider, schemaManager, databaseConnectionString, !request.SkipTags)));
+
+        tasks.Enqueue(("Insert type values", new InsertTypeValuesTask(provider, typeValueInserter, fileSystem, databaseConnectionString)));
+        tasks.Enqueue(("Insert data from archive",
+            new InsertDataTask(
+                dataInserter,
+                fileSystem,
+                databaseConnectionString,
+                processor,
+                !request.SkipTags,
+                (filename, count) => { report.TryAdd(fileSystem.Path.GetFileNameWithoutExtension(filename), new ImportSummary(count, 0)); })));
+
+        // Add constraints and foreign keys AFTER data is loaded
+        // This is critical for PostgreSQL where COPY respects FK constraints
+        // (unlike SQL Server's SqlBulkCopy which can bypass them)
         if (!request.SkipPrimaryKeys)
         {
-            tasks.Enqueue(("Add constraints", new AddConstraints(databaseConnectionString)));
-            tasks.Enqueue(("Add foreign keys", new AddForeignKeys(databaseConnectionString, !request.SkipTags)));
+            tasks.Enqueue(("Add constraints", new AddConstraintsTask(provider, schemaManager, databaseConnectionString, request.SkipPrimaryKeys)));
+            tasks.Enqueue(("Add foreign keys", new AddForeignKeysTask(provider, schemaManager, databaseConnectionString)));
         }
 
-        tasks.Enqueue(("Insert type values", new InsertTypeValues(databaseConnectionString)));
-        tasks.Enqueue(("Insert data from archive",
-            new InsertData(
-                databaseConnectionString,
-                dbName,
-                processor,
-                !request.SkipTags, (filename, count) => { report.TryAdd(fileSystem.Path.GetFileNameWithoutExtension(filename), new ImportSummary(count, 0)); })));
-
-        tasks.Enqueue(("Check DB Status", new CheckCounts(
+        tasks.Enqueue(("Check DB Status", new CheckCountsTask(
+            provider,
+            dataValidator,
             databaseConnectionString,
             (filename, count) => report.AddOrUpdate(filename,
                 _ => new ImportSummary(0, count),

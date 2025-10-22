@@ -1,12 +1,29 @@
 using System.Text;
 using Microsoft.Extensions.DependencyInjection;
 using Soddi;
+using Soddi.Providers;
+using Soddi.Providers.SqlServer;
+using Soddi.Providers.Postgres;
 
 Console.OutputEncoding = Encoding.UTF8;
 
 var container = new ServiceCollection()
     .AddSingleton<IFileSystem>(new FileSystem())
-    .Scan(scan => scan.FromApplicationDependencies().AddClasses());
+    .Scan(scan => scan.FromApplicationDependencies().AddClasses())
+    // Register provider classes explicitly
+    .AddSingleton<ProviderFactory>()
+    // SQL Server providers
+    .AddSingleton<SqlServerProvider>()
+    .AddSingleton<SqlServerSchemaManager>()
+    .AddSingleton<SqlServerDataInserter>()
+    .AddSingleton<SqlServerTypeValueInserter>()
+    .AddSingleton<SqlServerDataValidator>()
+    // PostgreSQL providers
+    .AddSingleton<PostgresProvider>()
+    .AddSingleton<PostgresSchemaManager>()
+    .AddSingleton<PostgresDataInserter>()
+    .AddSingleton<PostgresTypeValueInserter>()
+    .AddSingleton<PostgresDataValidator>();
 
 var registrar = new TypeRegistrar(container);
 var app = new CommandApp(registrar);

@@ -1,28 +1,23 @@
-﻿using Microsoft.Data.SqlClient;
+using Microsoft.Data.SqlClient;
 
-namespace Soddi.Tasks.SqlServer;
+namespace Soddi.Providers.SqlServer;
 
-public class InsertTypeValues(string connectionString) : ITask
+/// <summary>
+/// SQL Server type value insertion implementation
+/// </summary>
+[UsedImplicitly]
+public class SqlServerTypeValueInserter : ITypeValueInserter
 {
-    public async Task GoAsync(IProgress<(string taskId, string message, double weight, double maxValue)> progress, CancellationToken cancellationToken)
+    public async Task InsertTypeValuesAsync(IDbConnection connection, IFileSystem fileSystem, string archiveFolder, CancellationToken cancellationToken = default)
     {
-        await RetryPolicy.Policy.ExecuteAsync(async () => 
+        await Tasks.SqlServer.RetryPolicy.Policy.ExecuteAsync(async () =>
         {
-            await using var sqlConn = new SqlConnection(connectionString);
-            await using var command = new SqlCommand(Sql, sqlConn);
-
-            await sqlConn.OpenAsync(cancellationToken);
-            progress.Report(("insertValues", "Inserting type values", GetTaskWeight() / 2, GetTaskWeight()));
+            await using var command = new SqlCommand(TypeValuesSql, (SqlConnection)connection);
             await command.ExecuteNonQueryAsync(cancellationToken);
         });
     }
 
-    public double GetTaskWeight()
-    {
-        return 50000;
-    }
-
-    private const string Sql = @"
+    private const string TypeValuesSql = @"
 SET IDENTITY_INSERT [VoteTypes] ON
 INSERT [VoteTypes] ([Id], [Name]) VALUES(1, N'AcceptedByOriginator')
 INSERT [VoteTypes] ([Id], [Name]) VALUES(2, N'UpMod')
@@ -43,14 +38,14 @@ SET IDENTITY_INSERT [VoteTypes] OFF
 DBCC CHECKIDENT('VoteTypes', RESEED)
 
 SET IDENTITY_INSERT [PostTypes] ON
-INSERT [PostTypes] ([Id], [Type]) VALUES(1, N'Question') 
-INSERT [PostTypes] ([Id], [Type]) VALUES(2, N'Answer') 
-INSERT [PostTypes] ([Id], [Type]) VALUES(3, N'Wiki') 
-INSERT [PostTypes] ([Id], [Type]) VALUES(4, N'TagWikiExerpt') 
-INSERT [PostTypes] ([Id], [Type]) VALUES(5, N'TagWiki') 
-INSERT [PostTypes] ([Id], [Type]) VALUES(6, N'ModeratorNomination') 
-INSERT [PostTypes] ([Id], [Type]) VALUES(7, N'WikiPlaceholder') 
-INSERT [PostTypes] ([Id], [Type]) VALUES(8, N'PrivilegeWiki') 
+INSERT [PostTypes] ([Id], [Type]) VALUES(1, N'Question')
+INSERT [PostTypes] ([Id], [Type]) VALUES(2, N'Answer')
+INSERT [PostTypes] ([Id], [Type]) VALUES(3, N'Wiki')
+INSERT [PostTypes] ([Id], [Type]) VALUES(4, N'TagWikiExerpt')
+INSERT [PostTypes] ([Id], [Type]) VALUES(5, N'TagWiki')
+INSERT [PostTypes] ([Id], [Type]) VALUES(6, N'ModeratorNomination')
+INSERT [PostTypes] ([Id], [Type]) VALUES(7, N'WikiPlaceholder')
+INSERT [PostTypes] ([Id], [Type]) VALUES(8, N'PrivilegeWiki')
 SET IDENTITY_INSERT [PostTypes] OFF
 DBCC CHECKIDENT('PostTypes', RESEED)
 
@@ -101,7 +96,6 @@ INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(38, N'PostMergeDestination')
 INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(50, N'BumpedByCommunityUser')
 INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(52, N'BecameHotNetworkQuestion')
 INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(53, N'RemovedFromHotNetworkByMod')
-INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(66, N'Created from Wizard')
 SET IDENTITY_INSERT [PostHistoryTypes] OFF
 DBCC CHECKIDENT('PostHistoryTypes', RESEED)
 ";
