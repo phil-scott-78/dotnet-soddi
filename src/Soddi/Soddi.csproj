@@ -6,6 +6,7 @@
     <LangVersion>preview</LangVersion>
     <ImplicitUsings>true</ImplicitUsings>
     <TargetFramework>net9.0</TargetFramework>
+    <RollForward>Major</RollForward>
     <PackageReadmeFile>readme.md</PackageReadmeFile>
     <PathMap>$([System.IO.Path]::GetFullPath('$(MSBuildThisFileDirectory)'))=./</PathMap>
   </PropertyGroup>
