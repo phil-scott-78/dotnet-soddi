@@ -61,6 +61,7 @@ public class ImportHandler(
     ProcessorFactory processorFactory,
     IFileSystem fileSystem,
     AvailableArchiveParser availableArchiveParser,
+    ImportOptionsValidator validator,
     IAnsiConsole console)
     : AsyncCommand<ImportOptions>
 {
@@ -87,6 +88,9 @@ public class ImportHandler(
     public override async Task<int> ExecuteAsync(CommandContext context, ImportOptions request)
     {
         var cancellationToken = CancellationToken.None;
+
+        // Validate all options before starting import
+        await validator.ValidateAsync(request, cancellationToken);
 
         var requestPath = await CheckAndFixupPath(request.Path, cancellationToken);
 

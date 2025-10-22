@@ -7,5 +7,4 @@ public enum DatabaseProviderType
 {
     SqlServer,
     Postgres,
-    Cosmos
 }

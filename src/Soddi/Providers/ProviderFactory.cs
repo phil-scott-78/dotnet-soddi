@@ -14,7 +14,6 @@ public class ProviderFactory(IServiceProvider serviceProvider)
         {
             DatabaseProviderType.SqlServer => GetService<SqlServer.SqlServerProvider>(),
             DatabaseProviderType.Postgres => GetService<Postgres.PostgresProvider>(),
-            DatabaseProviderType.Cosmos => throw new NotImplementedException("Cosmos DB provider not yet implemented"),
             _ => throw new ArgumentException($"Unknown provider type: {providerType}", nameof(providerType))
         };
     }
@@ -28,7 +27,6 @@ public class ProviderFactory(IServiceProvider serviceProvider)
         {
             DatabaseProviderType.SqlServer => GetService<SqlServer.SqlServerSchemaManager>(),
             DatabaseProviderType.Postgres => GetService<Postgres.PostgresSchemaManager>(),
-            DatabaseProviderType.Cosmos => throw new NotImplementedException("Cosmos DB provider not yet implemented"),
             _ => throw new ArgumentException($"Unknown provider type: {providerType}", nameof(providerType))
         };
     }
@@ -42,7 +40,6 @@ public class ProviderFactory(IServiceProvider serviceProvider)
         {
             DatabaseProviderType.SqlServer => GetService<SqlServer.SqlServerDataInserter>(),
             DatabaseProviderType.Postgres => GetService<Postgres.PostgresDataInserter>(),
-            DatabaseProviderType.Cosmos => throw new NotImplementedException("Cosmos DB provider not yet implemented"),
             _ => throw new ArgumentException($"Unknown provider type: {providerType}", nameof(providerType))
         };
     }
@@ -56,7 +53,6 @@ public class ProviderFactory(IServiceProvider serviceProvider)
         {
             DatabaseProviderType.SqlServer => GetService<SqlServer.SqlServerTypeValueInserter>(),
             DatabaseProviderType.Postgres => GetService<Postgres.PostgresTypeValueInserter>(),
-            DatabaseProviderType.Cosmos => throw new NotImplementedException("Cosmos DB provider not yet implemented"),
             _ => throw new ArgumentException($"Unknown provider type: {providerType}", nameof(providerType))
         };
     }
@@ -70,7 +66,6 @@ public class ProviderFactory(IServiceProvider serviceProvider)
         {
             DatabaseProviderType.SqlServer => GetService<SqlServer.SqlServerDataValidator>(),
             DatabaseProviderType.Postgres => GetService<Postgres.PostgresDataValidator>(),
-            DatabaseProviderType.Cosmos => throw new NotImplementedException("Cosmos DB provider not yet implemented"),
             _ => throw new ArgumentException($"Unknown provider type: {providerType}", nameof(providerType))
         };
     }
@@ -84,7 +79,6 @@ public class ProviderFactory(IServiceProvider serviceProvider)
         {
             "sqlserver" or "sql" or "mssql" => DatabaseProviderType.SqlServer,
             "postgres" or "postgresql" or "pg" => DatabaseProviderType.Postgres,
-            "cosmos" or "cosmosdb" => DatabaseProviderType.Cosmos,
             _ => throw new ArgumentException($"Unknown provider: {provider}. Valid values are: sqlserver, postgres, cosmos", nameof(provider))
         };
     }
