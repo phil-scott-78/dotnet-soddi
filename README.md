@@ -8,6 +8,28 @@
 dotnet tool install --global soddi --version 0.5
 ```
 
+## Using DNX (.NET 10+)
+
+If you have .NET 10 or later, you can run soddi without installing it using DNX (like npx for Node.js):
+
+```bash
+dnx soddi [command] [options]
+```
+
+DNX downloads and runs the tool on-demand without permanent installation. On first use, you'll see a confirmation prompt. All examples in this README can use `dnx soddi` instead of `soddi`.
+
+Examples:
+```bash
+# List available archives
+dnx soddi list
+
+# Download and import (without installing soddi globally)
+dnx soddi download math
+dnx soddi import math -d math.stackexchange.com
+```
+
+---
+
 Inspirited by the original [Soddi](https://github.com/BrentOzarULTD/soddi), DotNet-Soddi is a console application that
 assists in not just importing the Stack Overflow data dumps, but also obtaining them.
 
@@ -31,7 +53,7 @@ Not all features of the original Soddi are supported.
 
 - Full Text isn't supported.
 
-## Download and install a database in two lines
+## Download and import a database in two lines
 
 ### SQL Server (default)
 
@@ -43,11 +65,23 @@ soddi download math
 soddi import math -d math.stackexchange.com
 ```
 
+Or with DNX (.NET 10+):
+```bash
+dnx soddi download math
+dnx soddi import math -d math.stackexchange.com
+```
+
 ### PostgreSQL
 
 ```bash
 soddi download math
 soddi import math --provider postgres --connectionString "Host=localhost;Username=postgres;Password=yourpassword" -d math_stackexchange
+```
+
+Or with DNX (.NET 10+):
+```bash
+dnx soddi download math
+dnx soddi import math --provider postgres --connectionString "Host=localhost;Username=postgres;Password=yourpassword" -d math_stackexchange
 ```
 
 Because of the size of the database and the bandwidth of archive.org, you might be better off using the torrent option.
