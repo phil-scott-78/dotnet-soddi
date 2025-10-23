@@ -5,7 +5,7 @@
 ![Nuget (with prereleases)](https://img.shields.io/nuget/vpre/dotnet-soddi)
 
 ```bash
-dotnet tool install --global dotnet-soddi --version 0.3.2
+dotnet tool install --global soddi --version 0.5
 ```
 
 Inspirited by the original [Soddi](https://github.com/BrentOzarULTD/soddi), DotNet-Soddi is a console application that
@@ -18,14 +18,22 @@ assists in not just importing the Stack Overflow data dumps, but also obtaining 
 - Download archive files from the command line via HTTP based on their site name.
 - Download archive files via BitTorrent based on their site name.
 
+## Supported Databases
+
+- **SQL Server** (default)
+- **PostgreSQL**
+
+Use the `--provider` flag with the import command to specify your database provider (see examples below).
+
 ## Limitations
 
-Not all features of Soddi are supported.
+Not all features of the original Soddi are supported.
 
-- It's only for SQL Server.
 - Full Text isn't supported.
 
 ## Download and install a database in two lines
+
+### SQL Server (default)
 
 The following command will download the archive for the math.stackexchange.com, then import it into an existing database
 named math.stackexchange.com
@@ -33,6 +41,13 @@ named math.stackexchange.com
 ```bash
 soddi download math
 soddi import math -d math.stackexchange.com
+```
+
+### PostgreSQL
+
+```bash
+soddi download math
+soddi import math --provider postgres --connectionString "Host=localhost;Username=postgres;Password=yourpassword" -d math_stackexchange
 ```
 
 Because of the size of the database and the bandwidth of archive.org, you might be better off using the torrent option.
@@ -93,7 +108,7 @@ Import data from a 7z archive or folder
 ```bash
 USAGE:
 
-Import data using defaults:
+Import data using defaults (SQL Server):
   soddi import math.stackexchange.com.7z
 Import data from a folder containing a collection of .7z or .xml files:
   soddi import stackoverflow
@@ -105,9 +120,19 @@ Import data using defaults and create database:
 Import data using defaults without constraints:
   soddi import --skipConstraints math.stackexchange.com.7z
 
+PostgreSQL examples:
+  soddi import math.stackexchange.com.7z --provider postgres --connectionString "Host=localhost;Username=postgres;Password=yourpassword"
+  soddi import stackoverflow --provider postgresql --connectionString "Host=myserver;Port=5432;Database=postgres;Username=admin;Password=secret" -d stackoverflow
+  soddi import math.stackexchange.com.7z --provider pg --dropAndCreate --connectionString "Host=localhost;Username=postgres;Password=yourpassword"
+
   -d, --database            Name of database. If omitted the name of the file or folder will be used.
-  -c, --connectionString    (Default: Server=.;Integrated Security=true) Connection string to server. Initial catalog
-                            will be ignored and the database parameter will be used for the database name.
+  -c, --connectionString    Connection string to server.
+                            SQL Server (default): Server=.;Integrated Security=true
+                            PostgreSQL: Host=localhost;Username=postgres;Password=yourpassword
+                            Initial catalog/database in the connection string will be ignored and the --database
+                            parameter will be used for the database name.
+  --provider                (Default: sqlserver) Database provider to use. Options: sqlserver, postgres (aliases:
+                            postgresql, pg). Case-insensitive.
   --dropAndCreate           (Default: false) Drop and recreate database. If a database already exists with this name it
                             will be dropped. Then a database will be created in the default server file location with
                             the default server options.
@@ -170,3 +195,41 @@ OPTIONS:
     -f, --portForward       Experimental. Enable port forwarding
 
 ```
+
+## PostgreSQL-Specific Notes
+
+When using PostgreSQL as the database provider:
+
+### Schema Conventions
+- Table names are created in lowercase (PostgreSQL convention)
+- Uses PostgreSQL native types: `SERIAL`, `TEXT`, `TIMESTAMP`, `BOOLEAN`, `VARCHAR(n)`
+
+### Performance
+- Bulk insert uses PostgreSQL's high-performance `COPY` command (similar to SQL Server's `SqlBulkCopy`)
+- Significantly faster than individual INSERT statements
+
+### Foreign Key Constraints
+- Foreign keys are added with the `NOT VALID` clause to allow orphaned references
+- This is common in Stack Overflow data dumps where referenced records may not exist
+- To find orphaned references after import:
+  ```sql
+  -- Example: Find badges with non-existent users
+  SELECT * FROM badges WHERE userid NOT IN (SELECT id FROM users);
+  ```
+- To validate constraints after import:
+  ```sql
+  ALTER TABLE badges VALIDATE CONSTRAINT fk_badges_users;
+  ```
+
+### Connection String Format
+PostgreSQL connection strings use Npgsql format:
+```
+Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=yourpassword
+```
+
+Common options:
+- `SSL Mode=Require` - Require SSL/TLS encryption
+- `Pooling=true` - Enable connection pooling (default)
+- `Timeout=30` - Connection timeout in seconds
+
+
