@@ -5,7 +5,7 @@
 ![Nuget (with prereleases)](https://img.shields.io/nuget/vpre/dotnet-soddi)
 
 ```bash
-dotnet tool install --global soddi --version 0.5
+dotnet tool install --global soddi
 ```
 
 ## Using DNX (.NET 10+)
