@@ -40,7 +40,7 @@
 
   <PropertyGroup>
     <PackAsTool>true</PackAsTool>
-    <PackageId>dotnet-soddi</PackageId>
+    <PackageId>soddi</PackageId>
     <ToolCommandName>soddi</ToolCommandName>
 
     <PackageOutputPath>./nupkg</PackageOutputPath>
