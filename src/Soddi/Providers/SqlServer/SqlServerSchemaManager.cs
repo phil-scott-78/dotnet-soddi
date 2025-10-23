@@ -63,13 +63,15 @@ public class SqlServerSchemaManager : ISchemaManager
     WHERE TABLE_SCHEMA = 'dbo'
     AND  TABLE_NAME in ('Badges', 'Comments', 'LinkTypes', 'PostHistory', 'PostHistoryTypes', 'PostLinks', 'Posts', 'PostTypes', 'Tags', 'Users', 'Votes', 'VoteTypes')";
 
-        await using var sqlCommand = new SqlCommand(sql, (SqlConnection)connection);
-
         var tablesThatAlreadyExist = new List<string>();
-        var dr = await sqlCommand.ExecuteReaderAsync(cancellationToken);
-        while (await dr.ReadAsync(cancellationToken))
+
+        await using (var sqlCommand = new SqlCommand(sql, (SqlConnection)connection))
+        await using (var dr = await sqlCommand.ExecuteReaderAsync(cancellationToken))
         {
-            tablesThatAlreadyExist.Add(dr.GetString(0));
+            while (await dr.ReadAsync(cancellationToken))
+            {
+                tablesThatAlreadyExist.Add(dr.GetString(0));
+            }
         }
 
         if (tablesThatAlreadyExist.Count > 0)
@@ -471,95 +473,66 @@ GO
 ";
 
     private const string ForeignKeysSql = @"
-ALTER TABLE [dbo].[Badges]  WITH CHECK ADD  CONSTRAINT [FK_Badges_Users] FOREIGN KEY([UserId])
+-- Using WITH NOCHECK to add foreign keys without validating existing data
+-- This allows imports to succeed even with orphaned references in historical data
+-- while still enforcing constraints on future inserts/updates
+-- This is equivalent to PostgreSQL's NOT VALID option
+--
+-- To find and clean up orphaned data later, run queries like:
+-- SELECT * FROM Badges WHERE UserId NOT IN (SELECT Id FROM Users);
+-- To validate all constraints after cleanup:
+-- ALTER TABLE [dbo].[Badges] WITH CHECK CHECK CONSTRAINT [FK_Badges_Users];
+
+ALTER TABLE [dbo].[Badges] WITH NOCHECK ADD CONSTRAINT [FK_Badges_Users] FOREIGN KEY([UserId])
 REFERENCES [dbo].[Users] ([Id])
 GO
 
-ALTER TABLE [dbo].[Badges] CHECK CONSTRAINT [FK_Badges_Users]
-GO
-
-ALTER TABLE [dbo].[Comments]  WITH CHECK ADD  CONSTRAINT [FK_Comments_Posts] FOREIGN KEY([PostId])
+ALTER TABLE [dbo].[Comments] WITH NOCHECK ADD CONSTRAINT [FK_Comments_Posts] FOREIGN KEY([PostId])
 REFERENCES [dbo].[Posts] ([Id])
 GO
 
-ALTER TABLE [dbo].[Comments] CHECK CONSTRAINT [FK_Comments_Posts]
-GO
-
-ALTER TABLE [dbo].[Comments]  WITH CHECK ADD  CONSTRAINT [FK_Comments_Users] FOREIGN KEY([UserId])
+ALTER TABLE [dbo].[Comments] WITH NOCHECK ADD CONSTRAINT [FK_Comments_Users] FOREIGN KEY([UserId])
 REFERENCES [dbo].[Users] ([Id])
 GO
 
-ALTER TABLE [dbo].[Comments] CHECK CONSTRAINT [FK_Comments_Users]
-GO
-
-ALTER TABLE [dbo].[PostHistory]  WITH CHECK ADD  CONSTRAINT [FK_PostHistory_PostHistoryTypes] FOREIGN KEY([PostHistoryTypeId])
+ALTER TABLE [dbo].[PostHistory] WITH NOCHECK ADD CONSTRAINT [FK_PostHistory_PostHistoryTypes] FOREIGN KEY([PostHistoryTypeId])
 REFERENCES [dbo].[PostHistoryTypes] ([Id])
 GO
 
-ALTER TABLE [dbo].[PostHistory] CHECK CONSTRAINT [FK_PostHistory_PostHistoryTypes]
-GO
-
-ALTER TABLE [dbo].[PostHistory]  WITH CHECK ADD  CONSTRAINT [FK_PostHistory_Posts] FOREIGN KEY([PostId])
+ALTER TABLE [dbo].[PostHistory] WITH NOCHECK ADD CONSTRAINT [FK_PostHistory_Posts] FOREIGN KEY([PostId])
 REFERENCES [dbo].[Posts] ([Id])
 GO
 
-ALTER TABLE [dbo].[PostHistory] CHECK CONSTRAINT [FK_PostHistory_Posts]
-GO
-
-ALTER TABLE [dbo].[PostHistory]  WITH CHECK ADD  CONSTRAINT [FK_PostHistory_Users] FOREIGN KEY([UserId])
+ALTER TABLE [dbo].[PostHistory] WITH NOCHECK ADD CONSTRAINT [FK_PostHistory_Users] FOREIGN KEY([UserId])
 REFERENCES [dbo].[Users] ([Id])
 GO
 
-ALTER TABLE [dbo].[PostHistory] CHECK CONSTRAINT [FK_PostHistory_Users]
-GO
-
-ALTER TABLE [dbo].[PostLinks]  WITH CHECK ADD  CONSTRAINT [FK_PostLinks_LinkTypes] FOREIGN KEY([LinkTypeId])
+ALTER TABLE [dbo].[PostLinks] WITH NOCHECK ADD CONSTRAINT [FK_PostLinks_LinkTypes] FOREIGN KEY([LinkTypeId])
 REFERENCES [dbo].[LinkTypes] ([Id])
 GO
 
-ALTER TABLE [dbo].[PostLinks] CHECK CONSTRAINT [FK_PostLinks_LinkTypes]
-GO
-
-ALTER TABLE [dbo].[PostLinks]  WITH CHECK ADD  CONSTRAINT [FK_PostLinks_Posts] FOREIGN KEY([PostId])
+ALTER TABLE [dbo].[PostLinks] WITH NOCHECK ADD CONSTRAINT [FK_PostLinks_Posts] FOREIGN KEY([PostId])
 REFERENCES [dbo].[Posts] ([Id])
 GO
 
-ALTER TABLE [dbo].[PostLinks] CHECK CONSTRAINT [FK_PostLinks_Posts]
-GO
-
-ALTER TABLE [dbo].[PostLinks]  WITH CHECK ADD  CONSTRAINT [FK_PostLinks_Posts_Related] FOREIGN KEY([RelatedPostId])
+ALTER TABLE [dbo].[PostLinks] WITH NOCHECK ADD CONSTRAINT [FK_PostLinks_Posts_Related] FOREIGN KEY([RelatedPostId])
 REFERENCES [dbo].[Posts] ([Id])
 GO
 
-ALTER TABLE [dbo].[PostLinks] CHECK CONSTRAINT [FK_PostLinks_Posts_Related]
-GO
-
-ALTER TABLE [dbo].[Posts]  WITH CHECK ADD  CONSTRAINT [FK_Posts_PostTypes] FOREIGN KEY([PostTypeId])
+ALTER TABLE [dbo].[Posts] WITH NOCHECK ADD CONSTRAINT [FK_Posts_PostTypes] FOREIGN KEY([PostTypeId])
 REFERENCES [dbo].[PostTypes] ([Id])
 GO
 
-ALTER TABLE [dbo].[Posts] CHECK CONSTRAINT [FK_Posts_PostTypes]
-GO
-
-ALTER TABLE [dbo].[Posts]  WITH CHECK ADD  CONSTRAINT [FK_Posts_Users] FOREIGN KEY([OwnerUserId])
+ALTER TABLE [dbo].[Posts] WITH NOCHECK ADD CONSTRAINT [FK_Posts_Users] FOREIGN KEY([OwnerUserId])
 REFERENCES [dbo].[Users] ([Id])
 GO
 
-ALTER TABLE [dbo].[Posts] CHECK CONSTRAINT [FK_Posts_Users]
-GO
-
-ALTER TABLE [dbo].[Votes]  WITH CHECK ADD  CONSTRAINT [FK_Votes_Posts] FOREIGN KEY([PostId])
+ALTER TABLE [dbo].[Votes] WITH NOCHECK ADD CONSTRAINT [FK_Votes_Posts] FOREIGN KEY([PostId])
 REFERENCES [dbo].[Posts] ([Id])
 GO
 
-ALTER TABLE [dbo].[Votes] CHECK CONSTRAINT [FK_Votes_Posts]
-GO
-
-ALTER TABLE [dbo].[Votes]  WITH CHECK ADD  CONSTRAINT [FK_Votes_VoteTypes] FOREIGN KEY([VoteTypeId])
+ALTER TABLE [dbo].[Votes] WITH NOCHECK ADD CONSTRAINT [FK_Votes_VoteTypes] FOREIGN KEY([VoteTypeId])
 REFERENCES [dbo].[VoteTypes] ([Id])
-GO
-
-ALTER TABLE [dbo].[Votes] CHECK CONSTRAINT [FK_Votes_VoteTypes]
 GO
 ";
 }

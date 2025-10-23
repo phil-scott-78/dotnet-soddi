@@ -95,6 +95,7 @@ INSERT INTO posthistorytypes (id, type) VALUES(38, 'PostMergeDestination');
 INSERT INTO posthistorytypes (id, type) VALUES(50, 'BumpedByCommunityUser');
 INSERT INTO posthistorytypes (id, type) VALUES(52, 'BecameHotNetworkQuestion');
 INSERT INTO posthistorytypes (id, type) VALUES(53, 'RemovedFromHotNetworkByMod');
+INSERT INTO posthistorytypes (id, type) VALUES(66, 'Created from Wizard');
 SELECT setval('posthistorytypes_id_seq', (SELECT MAX(id) FROM posthistorytypes));
 ";
 }

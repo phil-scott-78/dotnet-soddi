@@ -96,6 +96,7 @@ INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(38, N'PostMergeDestination')
 INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(50, N'BumpedByCommunityUser')
 INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(52, N'BecameHotNetworkQuestion')
 INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(53, N'RemovedFromHotNetworkByMod')
+INSERT [PostHistoryTypes] ([Id], [Type]) VALUES(66, N'Created from Wizard')
 SET IDENTITY_INSERT [PostHistoryTypes] OFF
 DBCC CHECKIDENT('PostHistoryTypes', RESEED)
 ";
