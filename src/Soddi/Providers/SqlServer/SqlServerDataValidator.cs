@@ -26,7 +26,7 @@ public class SqlServerDataValidator : IDataValidator
 
     private async Task<long> GetCountFromDbAsync(IDbConnection connection, string tableName, CancellationToken cancellationToken)
     {
-        return await Tasks.SqlServer.RetryPolicy.Policy.ExecuteAsync(async () =>
+        return await SqlServerRetryPolicy.Policy.ExecuteAsync(async () =>
         {
             await using var command = new SqlCommand($"SELECT COUNT_BIG(*) FROM {tableName}", (SqlConnection)connection);
             return (long)await command.ExecuteScalarAsync(cancellationToken);

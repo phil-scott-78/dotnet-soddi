@@ -10,7 +10,7 @@ public class SqlServerTypeValueInserter : ITypeValueInserter
 {
     public async Task InsertTypeValuesAsync(IDbConnection connection, IFileSystem fileSystem, string archiveFolder, CancellationToken cancellationToken = default)
     {
-        await Tasks.SqlServer.RetryPolicy.Policy.ExecuteAsync(async () =>
+        await SqlServerRetryPolicy.Policy.ExecuteAsync(async () =>
         {
             await using var command = new SqlCommand(TypeValuesSql, (SqlConnection)connection);
             await command.ExecuteNonQueryAsync(cancellationToken);
